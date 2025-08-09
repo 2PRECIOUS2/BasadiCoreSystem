@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Container, Typography, Divider, Grid, Button, Stack, Fade, Dialog, DialogTitle, DialogContent, IconButton } from '@mui/material';
+import { Container, Typography, Divider, Grid, Button, Stack, Fade, Dialog, DialogTitle, DialogContent, IconButton, Box } from '@mui/material';
 import MaterialForm from './MaterialForm';
 import MaterialList from './MaterialList';
 import InvoiceList from './InvoiceList';
@@ -9,11 +9,15 @@ import CloseIcon from '@mui/icons-material/Close';
 const MaterialPage = () => {
   const [openNewStock, setOpenNewStock] = useState(false);
   const [openInvoiceList, setOpenInvoiceList] = useState(false);
+  const [openMaterialForm, setOpenMaterialForm] = useState(false);
 
   const handleAddNewStock = () => setOpenNewStock(true);
   const handleCloseNewStock = () => setOpenNewStock(false);
   const handleViewInvoice = () => setOpenInvoiceList(true);
   const handleCloseInvoiceList = () => setOpenInvoiceList(false);
+  
+  const handleAddNewMaterial = () => setOpenMaterialForm(true);
+  const handleCloseMaterialForm = () => setOpenMaterialForm(false);
 
   return (
     <Container maxWidth="lg" sx={{ pt: 1, pb: 3 }}>
@@ -23,58 +27,82 @@ const MaterialPage = () => {
           gutterBottom
           sx={{
             mt: -4,
+            mb: 4, // Add more bottom margin for spacing
             textAlign: 'center'
           }}
         >
           Manage Materials
         </Typography>
       </Fade>
+      
       <Grid container spacing={4}>
-        {/* Left Column for Add New Material Form */}
-        <Grid item xs={12} md={8}>
-          <MaterialForm />
-        </Grid>
-
-        {/* Right Column for Actions */}
-        <Grid item xs={12} md={4}>
-          <Typography variant="h6" gutterBottom>
-            Actions
-          </Typography>
-          <Stack spacing={2}>
-            <Button
-              variant="contained"
-              color="primary"
-              fullWidth
-              onClick={handleAddNewStock}
-              type="submit"
-              sx={{
-                py: 1.5,
-                fontWeight: 600,
-                letterSpacing: 1,
-                fontSize: 18,
-                borderRadius: 2,
-                background: 'linear-gradient(90deg, #1976d2 60%, #64b5f6 100%)',
-                boxShadow: '0 2px 8px #90caf9',
-                transition: 'transform 0.18s, box-shadow 0.18s',
-                '&:hover': {
-                  transform: 'scale(1.05)',
-                  boxShadow: '0 4px 16px #90caf9',
-                  background: 'linear-gradient(90deg, #1565c0 60%, #42a5f5 100%)'
-                }
-              }}
-            >
-              Add New Stock
-            </Button>
-            <Button
-              variant="outlined"
-              color="secondary"
-              fullWidth
-              onClick={handleViewInvoice}
-              sx={{ py: 1.5 }}
-            >
-              View Invoice
-            </Button>
-          </Stack>
+        {/* Updated Actions Section with better spacing */}
+        <Grid item xs={12}>
+          <Box sx={{ mb: 3 }}> {/* Add Box wrapper with margin bottom */}
+            <Stack direction="row" spacing={2} justifyContent="center">
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={handleAddNewMaterial}
+                sx={{
+                  py: 1.5,
+                  px: 3,
+                  fontWeight: 600,
+                  letterSpacing: 1,
+                  fontSize: 16,
+                  borderRadius: 2,
+                  background: 'linear-gradient(90deg, #4caf50 60%, #81c784 100%)',
+                  boxShadow: '0 2px 8px #a5d6a7',
+                  transition: 'transform 0.18s, box-shadow 0.18s',
+                  '&:hover': {
+                    transform: 'scale(1.05)',
+                    boxShadow: '0 4px 16px #a5d6a7',
+                    background: 'linear-gradient(90deg, #388e3c 60%, #66bb6a 100%)'
+                  }
+                }}
+              >
+                Add New Material
+              </Button>
+              
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={handleAddNewStock}
+                sx={{
+                  py: 1.5,
+                  px: 3,
+                  fontWeight: 600,
+                  letterSpacing: 1,
+                  fontSize: 16,
+                  borderRadius: 2,
+                  background: 'linear-gradient(90deg, #1976d2 60%, #64b5f6 100%)',
+                  boxShadow: '0 2px 8px #90caf9',
+                  transition: 'transform 0.18s, box-shadow 0.18s',
+                  '&:hover': {
+                    transform: 'scale(1.05)',
+                    boxShadow: '0 4px 16px #90caf9',
+                    background: 'linear-gradient(90deg, #1565c0 60%, #42a5f5 100%)'
+                  }
+                }}
+              >
+                Add New Stock
+              </Button>
+              
+              <Button
+                variant="outlined"
+                color="secondary"
+                onClick={handleViewInvoice}
+                sx={{ 
+                  py: 1.5, 
+                  px: 3,
+                  fontSize: 16,
+                  fontWeight: 600
+                }}
+              >
+                View Invoice
+              </Button>
+            </Stack>
+          </Box>
         </Grid>
 
         {/* Separator */}
@@ -82,11 +110,33 @@ const MaterialPage = () => {
           <Divider sx={{ my: 2 }} />
         </Grid>
 
-        {/* Bottom Section for Existing Materials List (full width) */}
+        {/* Materials List Section with pagination */}
         <Grid item xs={12}>
-          <MaterialList />
+          <MaterialList maxItemsPerPage={16} />
         </Grid>
       </Grid>
+
+      {/* Material Form Dialog */}
+      <Dialog open={openMaterialForm} onClose={handleCloseMaterialForm} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ m: 0, p: 2 }}>
+          Add New Material
+          <IconButton
+            aria-label="close"
+            onClick={handleCloseMaterialForm}
+            sx={{
+              position: 'absolute',
+              right: 8,
+              top: 8,
+              color: (theme) => theme.palette.grey[500],
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers>
+          <MaterialForm onSuccess={handleCloseMaterialForm} />
+        </DialogContent>
+      </Dialog>
 
       {/* New Stock Dialog */}
       <Dialog open={openNewStock} onClose={handleCloseNewStock} maxWidth="md" fullWidth>

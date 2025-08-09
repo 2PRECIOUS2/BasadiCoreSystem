@@ -33,7 +33,9 @@ app.use('/api/products', productsRoutes);
 app.use('/images/products', express.static(path.join(__dirname, '../public/images/products')));
 app.use('/images', express.static(path.join(__dirname, '../public/images')));
 
-
+const customersRoutes = require('./routes/customers');
+app.use('/api/customers', customersRoutes(db.pool));
+console.log('✅ Customers routes registered');
 // User Registration Route - Using `db.pool.connect()`
 app.post('/api/register', async (req, res) => {
   // ... (your existing registration logic) ...

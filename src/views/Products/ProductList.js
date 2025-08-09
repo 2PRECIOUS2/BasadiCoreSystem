@@ -1,11 +1,10 @@
-// src/views/Products/ProductList.js
 import React, { useEffect, useState } from 'react';
 import {
   Typography,
   Card,
   CardContent,
   Grid,
-  Avatar, // Keeping Avatar for consistency, assuming products might have images
+  Avatar,
   IconButton,
   Menu,
   MenuItem,
@@ -14,24 +13,24 @@ import {
   InputAdornment,
   Select
 } from '@mui/material';
-import MoreVertIcon from '@mui/icons-material/MoreVert'; // For ellipses
-import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward'; // Green arrow
-import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward'; // Red arrow
+import MoreVertIcon from '@mui/icons-material/MoreVert';
+import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
+import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import SearchIcon from '@mui/icons-material/Search';
+import ProductUpdateModal from './ProductUpdateModal';
 
 const ProductList = () => {
   const [products, setProducts] = useState([]);
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedProduct, setSelectedProduct] = useState(null);
-
   // Search/filter state
   const [searchFilter, setSearchFilter] = useState('product_name');
   const [searchValue, setSearchValue] = useState('');
+   const [updateModalOpen, setUpdateModalOpen] = useState(false);
 
-  // Placeholder for fetching products (you'll need a backend endpoint for this)
+  // Fetch products from backend
   const fetchProducts = () => {
-
-    fetch('http://localhost:5000/api/products/all') // Assuming this endpoint will exist
+    fetch('http://localhost:5000/api/products/all')
       .then(res => {
         console.log('Response status:', res.status);
         return res.json();
@@ -41,14 +40,13 @@ const ProductList = () => {
         setProducts(data);
       })
       .catch(error => console.error('Error fetching products:', error));
-  
   };
 
   useEffect(() => {
     fetchProducts();
   }, []);
 
-    const filteredProducts = products.filter(prod => {
+  const filteredProducts = products.filter(prod => {
     const value = searchValue.toLowerCase();
     if (!value) return true;
     if (searchFilter === 'product_name') return prod.product_name.toLowerCase().includes(value);
@@ -61,28 +59,29 @@ const ProductList = () => {
     setSelectedProduct(product);
   };
 
+   const handleSearch = (e) => {
+    e.preventDefault();
+    // The filtering is already done in filteredProducts, so just prevent form submission
+  };
   const handleMenuClose = () => {
     setAnchorEl(null);
-    setSelectedProduct(null);
   };
 
   const handleUpdate = () => {
-    if (selectedProduct) {
-      alert(`Implement update for product: ${selectedProduct.product_name}`);
-      // This would open a modal with an update form.
-    }
-    handleMenuClose();
+    setUpdateModalOpen(true);
+    handleMenuClose()
   };
-    const handleSearch = (e) => {
-    e.preventDefault();
-    // Filtering is handled reactively above
-  };
- 
+
+  const handleUpdateComplete = () => {
+  fetchProducts();           // Refresh the products list
+  setUpdateModalOpen(false); // Close the modal
+  setSelectedProduct(null);  // Clear selected product
+};
+
 
   return (
     <>
-
-    {/* Search Bar with Filter */}
+      {/* Search Bar with Filter */}
       <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 2 }}>
         <Select
           value={searchFilter}
@@ -90,6 +89,7 @@ const ProductList = () => {
           size="small"
           sx={{ minWidth: 140 }}
         >
+
           <MenuItem value="product_name">Product Name</MenuItem>
           <MenuItem value="category">Category</MenuItem>
         </Select>
@@ -119,55 +119,83 @@ const ProductList = () => {
             <Typography variant="body1">No products found.</Typography>
           </Grid>
         ) : (
-          filteredProducts.map((prod) => (
-            <Grid item xs={12} sm={6} md={4} key={prod.id}> {/* Adjusted grid size for products */}
-              <Card>
-                <CardContent>
-                  <Grid container spacing={2} alignItems="center">
-                    <Grid item>
-                      {/* Assuming product images are in public/images/products */}
-                     <Avatar
-                      variant="square"
-                      src={`/images/products/${prod.image_path}`}
-                      sx={{ width: 56, height: 56 }}
-                      imgProps={{ onError: (e) => { e.target.src = '/images/products/placeholder.png'; } }}
-                    />
-                </Grid>
-                    <Grid item xs>
-                      <Typography variant="h6">{prod.product_name}</Typography>
-                      <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
-                        <Typography variant="body1" sx={{ mr: 1 }}>
-                          Quantity: {prod.quantity}
+          filteredProducts.map((prod) => {
+            console.log('Product:', prod.product_name);
+            console.log('Image path from DB:', prod.image_path);
+            
+            return (
+              <Grid item xs={12} sm={6} md={4} key={prod.id}>
+                <Card>
+                  <CardContent>
+                    <Grid container spacing={2} alignItems="center">
+                      <Grid item>
+                        <Avatar
+                          variant="square"
+                          src={`/images/products/${prod.image_path}`}
+                          sx={{ width: 56, height: 56 }}
+                          onError={(e) => { 
+                            console.log('Image failed to load:', e.target.src);
+                            e.target.src = '/images/products/placeholder.png'; 
+                          }}
+                        />
+                      </Grid>
+                      <Grid item xs>
+                        <Typography variant="h6" component="div">
+                          {prod.product_name}
                         </Typography>
-                        {prod.quantity > 20 ? (
-                          <ArrowUpwardIcon sx={{ color: 'green' }} />
-                        ) : (
-                          <ArrowDownwardIcon sx={{ color: 'red' }} />
-                        )}
-                      </Box>
+                        <Typography variant="body2" color="text.secondary">
+                          Category: {prod.category || 'N/A'}
+                        </Typography>
+                        
+                        <Typography variant="body2" color="text.secondary">
+                        Cost: R{prod.cost_of_production ? Number(prod.cost_of_production).toFixed(2) : '0.00'}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Price: R{prod.selling_price ? Number(prod.selling_price).toFixed(2) : '0.00'}
+                        </Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
+                          <Typography variant="body2" sx={{ mr: 1 }}>
+                            Quantity: {prod.quantity || 0}
+                          </Typography>
+                          {prod.quantity > 0 ? (
+                            <ArrowUpwardIcon sx={{ color: 'green', fontSize: 16 }} />
+                          ) : (
+                            <ArrowDownwardIcon sx={{ color: 'red', fontSize: 16 }} />
+                          )}
+                        </Box>
+                      </Grid>
+                      <Grid item>
+                        <IconButton
+                          onClick={(event) => handleMenuClick(event, prod)}
+                          size="small"
+                        >
+                          <MoreVertIcon />
+                        </IconButton>
+                      </Grid>
                     </Grid>
-                    <Grid item>
-                      <IconButton
-                        aria-label="settings"
-                        onClick={(event) => handleMenuClick(event, prod)}
-                      >
-                        <MoreVertIcon />
-                      </IconButton>
-                      <Menu
-                        anchorEl={anchorEl}
-                        open={Boolean(anchorEl) && selectedProduct?.id === prod.id}
-                        onClose={handleMenuClose}
-                      >
-                        <MenuItem onClick={handleUpdate}>Update</MenuItem>
-                      </Menu>
-                    </Grid>
-                  </Grid>
-                </CardContent>
-              </Card>
-            </Grid>
-          ))
+                  </CardContent>
+                </Card>
+              </Grid>
+            );
+          })
         )}
       </Grid>
+
+      <ProductUpdateModal
+        open={updateModalOpen}
+        product={selectedProduct}
+        onUpdate={handleUpdateComplete}
+      />
+
+      {/* Context Menu */}
+      <Menu
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={handleMenuClose}
+      >
+        <MenuItem onClick={handleUpdate}>Update</MenuItem>
+        <MenuItem onClick={handleMenuClose}>Archive</MenuItem>
+      </Menu>
     </>
   );
 };

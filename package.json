@@ -23,6 +23,7 @@
     "@mui/x-date-pickers": "^8.9.2",
     "@svgr/rollup": "^8.1.0",
     "@tabler/icons-react": "^2.35.0",
+    "axios": "^1.11.0",
     "date-fns": "^4.1.0",
     "lodash": "^4.17.21",
     "multer": "^2.0.0",
