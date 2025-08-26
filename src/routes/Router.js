@@ -4,6 +4,8 @@ import Loadable from '../layouts/full/shared/loadable/Loadable';
 import { element, exact } from 'prop-types';
 import ProductPage from '../views/Products/ProductPage';
 import CustomersPage from '../views/Customers/CustomersPage';
+import orders from '../views/Orders/orders';
+import AddOrdersForm from '../views/Orders/AddOrdersForm';
 
 /* ***Layouts**** */
 const FullLayout = Loadable(lazy(() => import('../layouts/full/FullLayout')));
@@ -14,7 +16,7 @@ const Dashboard = Loadable(lazy(() => import('../views/dashboard/Dashboard')))
 const Material = Loadable(lazy(() => import('../views/Material/material')))
 const product = Loadable(lazy(() => import('../views/Products/ProductPage')))
 const customers = Loadable(lazy(() => import('../views/Customers/CustomersPage')))
-const orders = Loadable(lazy(() => import('../views/Orders/orders')))
+const Orders = Loadable(lazy(() => import('../views/Orders/orders')))
 const financialOverview = Loadable(lazy(() => import('../views/Financial Overview/financialOverview')))
 const projects = Loadable(lazy(() => import('../views/Projects/projects')))
 //const SamplePage = Loadable(lazy(() => import('../views/sample-page/SamplePage')))
@@ -36,7 +38,8 @@ const Router = [
       { path: '/Products', exact: true, element: <ProductPage /> },
       // --- NEW ROUTES FOR BASADI CORE ---
       {path: '/Customers', exact: true, element: <CustomersPage /> },
-      { path: '/Orders', exact: true, element: <orders /> },
+      { path: '/Orders', exact: true, element: <Orders /> },
+      { path: '/Orders/AddOrderForm', exact: true, element: <AddOrdersForm /> },
       { path: '/Financial Overview', exact: true, element: <financialOverview /> },
       { path: '/Projects', exact: true, element: <projects /> },
       //{ path: '/sample-page', exact: true, element: <SamplePage /> },

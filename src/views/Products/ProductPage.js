@@ -12,16 +12,21 @@ import {
   DialogTitle,   // Import DialogTitle
   DialogContent, // Import DialogContent
   IconButton,    // Import IconButton for the close button
-} from '@mui/material';
-import CloseIcon from '@mui/icons-material/Close'; // Import CloseIcon
+}
+from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
+import PeopleAltIcon from '@mui/icons-material/PeopleAlt';
+import { useNavigate } from 'react-router-dom';
 
-import ProductForm from './ProductForm'; // Your Add New Product form
-import ProductList from './ProductList'; // Your Product List
+import ProductForm from './ProductForm';
+import ProductList from './ProductList';
 import MakeProductForm from './makeProductForm';
+import ServiceProvidersDialog from './ServiceProvidersDialog';
 
 const ProductPage = () => {
   // State to control the visibility of the "Add New Product" form dialog
   const [openAddProductDialog, setOpenAddProductDialog] = useState(false);
+  const [openServiceProvidersDialog, setOpenServiceProvidersDialog] = useState(false);
 
   // Function to open the dialog
   const handleAddNewProduct = () => {
@@ -46,7 +51,7 @@ const handleCloseMakeProductDialog = () => setOpenMakeProductDialog(false);
         variant="h4"
         gutterBottom
         sx={{
-          mt: -2, // Adjust to move title up as desired
+          mt: -2,
           textAlign: 'center'
         }}
       >
@@ -56,53 +61,75 @@ const handleCloseMakeProductDialog = () => setOpenMakeProductDialog(false);
       <Grid container spacing={4}>
         {/* Top Action Buttons */}
         <Grid item xs={12} md={12}>
-          <Stack direction="row" spacing={2} justifyContent="flex-start" sx={{ mb: 3 }}>
-           
-               <Button
-            variant="contained"
-            color="primary"
-            onClick={handleAddNewProduct}
-            type="submit"
-            sx={{
-              py: 1.5,
-              fontWeight: 600,
-              letterSpacing: 1,
-              fontSize: 18,
-              borderRadius: 2,
-              background: 'linear-gradient(90deg, #1976d2 60%, #64b5f6 100%)',
-              boxShadow: '0 2px 8px #90caf9',
-              transition: 'transform 0.18s, box-shadow 0.18s',
-              '&:hover': {
-                transform: 'scale(1.05)',
-                boxShadow: '0 4px 16px #90caf9',
-                background: 'linear-gradient(90deg, #1565c0 60%, #42a5f5 100%)'
-              }
-            }}
-          >
-            
+          <Stack direction="row" spacing={2} justifyContent="flex-end" sx={{ mb: 3 }}>
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleAddNewProduct}
+              type="submit"
+              sx={{
+                py: 1.5,
+                fontWeight: 600,
+                letterSpacing: 1,
+                fontSize: 18,
+                borderRadius: 2,
+                background: 'linear-gradient(90deg, #1976d2 60%, #64b5f6 100%)',
+                boxShadow: '0 2px 8px #90caf9',
+                transition: 'transform 0.18s, box-shadow 0.18s',
+                '&:hover': {
+                  transform: 'scale(1.05)',
+                  boxShadow: '0 4px 16px #90caf9',
+                  background: 'linear-gradient(90deg, #1565c0 60%, #42a5f5 100%)'
+                }
+              }}
+            >
               Add New Product
             </Button>
-              <Button
-    variant="outlined"
-    color="secondary"
-    onClick={handleMakeProducts}
-    sx={{
-      py: 1.5,
-      px: 3,
-      minWidth: 200, // Optional: set a fixed width for both buttons
-      fontWeight: 600,
-      letterSpacing: 1,
-      fontSize: 18,
-      borderRadius: 2,
-      transition: 'transform 0.18s, box-shadow 0.18s',
-      '&:hover': {
-        transform: 'scale(1.05)',
-        boxShadow: '0 4px 16px #90caf9',
-        borderColor: '#1565c0'
-      }
-    }}
-  >
+            <Button
+              variant="outlined"
+              color="secondary"
+              onClick={handleMakeProducts}
+              sx={{
+                py: 1.5,
+                px: 3,
+                minWidth: 200,
+                fontWeight: 600,
+                letterSpacing: 1,
+                fontSize: 18,
+                borderRadius: 2,
+                transition: 'transform 0.18s, box-shadow 0.18s',
+                '&:hover': {
+                  transform: 'scale(1.05)',
+                  boxShadow: '0 4px 16px #90caf9',
+                  borderColor: '#1565c0'
+                }
+              }}
+            >
               Make Products
+            </Button>
+            <Button
+              variant="outlined"
+              color="warning"
+              startIcon={<PeopleAltIcon sx={{ color: '#ff9800', fontSize: 28 }} />}
+              sx={{
+                py: 1.5,
+                px: 3,
+                minWidth: 220,
+                fontWeight: 600,
+                letterSpacing: 1,
+                fontSize: 18,
+                borderRadius: 2,
+                transition: 'transform 0.18s, box-shadow 0.18s',
+                '&:hover': {
+                  transform: 'scale(1.05)',
+                  boxShadow: '0 4px 16px #ff9800',
+                  borderColor: '#ff9800',
+                  background: '#fff3e0'
+                }
+              }}
+              onClick={() => setOpenServiceProvidersDialog(true)}
+            >
+              Service Providers
             </Button>
           </Stack>
         </Grid>
@@ -118,10 +145,10 @@ const handleCloseMakeProductDialog = () => setOpenMakeProductDialog(false);
 
       {/* Add New Product Dialog */}
       <Dialog
-        open={openAddProductDialog} // Controlled by state
-        onClose={handleCloseAddProductDialog} // Close handler
-        fullWidth // Dialog takes full width (can be 'maxWidth' for fixed size)
-        maxWidth="sm" // Or 'md', 'lg' based on form size
+        open={openAddProductDialog}
+        onClose={handleCloseAddProductDialog}
+        fullWidth
+        maxWidth="sm"
       >
         <DialogTitle>
           Add New Product
@@ -138,18 +165,12 @@ const handleCloseMakeProductDialog = () => setOpenMakeProductDialog(false);
             <CloseIcon />
           </IconButton>
         </DialogTitle>
-        <DialogContent dividers> {/* 'dividers' adds a line below title and above actions */}
-          {/* Render your ProductForm inside the dialog */}
-          <ProductForm
-            // You can pass props to ProductForm if needed, e.g., a callback to close the dialog
-            // onFormSubmit={handleCloseAddProductDialog}
-          />
+        <DialogContent dividers>
+          <ProductForm />
         </DialogContent>
-        {/* DialogActions can be added here if ProductForm doesn't have its own submit/cancel buttons */}
-        {/* But usually, forms have their own buttons inside DialogContent. */}
       </Dialog>
 
-            <Dialog
+      <Dialog
         open={openMakeProductDialog}
         onClose={handleCloseMakeProductDialog}
         fullWidth
@@ -174,6 +195,7 @@ const handleCloseMakeProductDialog = () => setOpenMakeProductDialog(false);
           <MakeProductForm />
         </DialogContent>
       </Dialog>
+      <ServiceProvidersDialog open={openServiceProvidersDialog} onClose={() => setOpenServiceProvidersDialog(false)} />
     </Container>
   );
 };

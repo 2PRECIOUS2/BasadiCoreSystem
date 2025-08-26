@@ -95,7 +95,7 @@ const NewStock = () => {
                       InputLabelProps={{ sx: { fontSize: 16 } }}
                     >
                       {materials.map((mat) => (
-                        <MenuItem key={mat.id} value={mat.id} sx={{ fontSize: 18 }}>
+                        <MenuItem key={mat.material_id} value={mat.material_id} sx={{ fontSize: 18 }}>
                           {mat.material_name} {mat.unit ? `(${mat.unit})` : ''}
                         </MenuItem>
                       ))}

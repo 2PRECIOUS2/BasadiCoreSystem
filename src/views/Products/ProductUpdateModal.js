@@ -13,12 +13,13 @@ import {
   Card,
   CardContent,
   Box,
-  IconButton
+  IconButton,
+  Grid
 } from '@mui/material';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline';
 
-const ProductUpdateModal = ({ open, onClose, product, onUpdate }) => {
+const ProductUpdateModal = ({ open, onClose, product, onUpdate, productMaterials: productMaterialsProp }) => {
   const [productDetails, setProductDetails] = useState({
     product_name: '',
     category: '',
@@ -46,16 +47,30 @@ const ProductUpdateModal = ({ open, onClose, product, onUpdate }) => {
         category: product.category || '',
         selling_price: Number(product.selling_price) || 0,
       });
-      
+
       const originalCost = Number(product.cost_of_production) || 0;
       setCostOfProduction(originalCost);
       setOriginalCostOfProduction(originalCost);
       setMaterialsModified(false);
-      
-      // Fetch product materials
-      fetchProductMaterials(product.id);
+
+      // Use productMaterials from props if available
+      if (Array.isArray(productMaterialsProp) && productMaterialsProp.length > 0) {
+        const formattedMaterials = productMaterialsProp.map(mat => ({
+          id: mat.material_id,
+          materialId: mat.material_id,
+          measurement: Number(mat.measurement) || 0,
+          unit: mat.unit || '',
+          material_name: mat.material_name || '',
+          unit_price: mat.unit_price || '',
+          saved: true
+        }));
+        setProductMaterials(formattedMaterials);
+      } else {
+        // Fallback to fetch if not provided
+        fetchProductMaterials(product.product_id);
+      }
     }
-  }, [product, open]);
+  }, [product, open, productMaterialsProp]);
 
   // Fetch materials list
   useEffect(() => {
@@ -82,7 +97,7 @@ const ProductUpdateModal = ({ open, onClose, product, onUpdate }) => {
       
       if (data && data.length > 0) {
         const formattedMaterials = data.map(mat => ({
-          id: mat.id,
+          id: mat.material_id,
           materialId: mat.material_id,
           measurement: Number(mat.measurement) || 0,
           unit: mat.unit || '',
@@ -109,7 +124,7 @@ const ProductUpdateModal = ({ open, onClose, product, onUpdate }) => {
     list[index][name] = value;
     
     if (name === 'materialId') {
-      const selectedMaterial = materialsList.find(m => m.id === value);
+      const selectedMaterial = materialsList.find(m => m.material_id === value);
       if (selectedMaterial) {
         list[index].unit = selectedMaterial.unit;
       }
@@ -134,7 +149,7 @@ const ProductUpdateModal = ({ open, onClose, product, onUpdate }) => {
     let total = 0;
     productMaterials.forEach(line => {
       if (line.materialId && line.measurement > 0) {
-        const mat = materialsList.find(m => m.id === line.materialId);
+        const mat = materialsList.find(m => m.material_id === line.materialId);
         if (mat && mat.unit_price) {
           const unitPrice = Number(mat.unit_price) || 0;
           const measurement = Number(line.measurement) || 0;
@@ -164,9 +179,9 @@ const ProductUpdateModal = ({ open, onClose, product, onUpdate }) => {
     return productMaterials
       .filter(mat => mat.materialId && mat.measurement)
       .map(mat => {
-        const selectedMaterial = materialsList.find(m => m.id === mat.materialId);
+        const selectedMaterial = materialsList.find(m => m.material_id === mat.materialId);
         return {
-          id: mat.id || null,
+          id: mat.material_id || null,
           materialId: mat.materialId,
           measurement: parseFloat(mat.measurement),
           unit: selectedMaterial ? selectedMaterial.unit : ''
@@ -176,7 +191,10 @@ const ProductUpdateModal = ({ open, onClose, product, onUpdate }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+    if (!product || !product.product_id) {
+      setMessage({ type: 'error', text: 'Product ID is missing. Cannot update.' });
+      return;
+    }
     const formData = new FormData();
     formData.append('product_name', productDetails.product_name);
     formData.append('category', productDetails.category);
@@ -184,17 +202,14 @@ const ProductUpdateModal = ({ open, onClose, product, onUpdate }) => {
     formData.append('selling_price', Number(productDetails.selling_price) || 0);
     formData.append('materials_modified', materialsModified.toString()); // Send modification flag
     formData.append('materials', JSON.stringify(prepareMaterialsForSubmission()));
-    
     if (image) {
       formData.append('image', image);
     }
-
     try {
-      const response = await fetch(`http://localhost:5000/api/products/update/${product.id}`, {
+      const response = await fetch(`http://localhost:5000/api/products/${product.product_id}`, {
         method: 'PUT',
         body: formData,
       });
-
       const data = await response.json();
       if (response.ok) {
         setMessage({ type: 'success', text: 'Product updated successfully!' });
@@ -213,7 +228,12 @@ const ProductUpdateModal = ({ open, onClose, product, onUpdate }) => {
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-      <DialogTitle>Update Product: {product?.product_name}</DialogTitle>
+      <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span>Update Product: {product?.product_name}</span>
+        <IconButton aria-label="close" onClick={onClose} size="small">
+          <span aria-hidden="true">&times;</span>
+        </IconButton>
+      </DialogTitle>
       <form onSubmit={handleSubmit}>
         <DialogContent>
           <Stack spacing={3}>
@@ -255,63 +275,57 @@ const ProductUpdateModal = ({ open, onClose, product, onUpdate }) => {
                     </Typography>
                   )}
                 </Typography>
-                {productMaterials.map((singleMaterial, index) => (
-                  <Box key={index} sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 1 }}>
-                    <TextField
-                      select
-                      label="Material"
-                      name="materialId"
-                      value={singleMaterial.materialId}
-                      onChange={(e) => handleMaterialLineChange(index, e)}
-                      sx={{ flexGrow: 1 }}
-                      required
-                    >
-                      {materialsList.map((mat) => (
-                        <MenuItem key={mat.id} value={mat.id}>
-                          {mat.material_name} ({mat.unit}) - R{Number(mat.unit_price).toFixed(2)}
-                        </MenuItem>
-                      ))}
-                    </TextField>
-
-                    <TextField
-                      label="Measurement"
-                      name="measurement"
-                      type="number"
-                      value={singleMaterial.measurement}
-                      onChange={(e) => handleMaterialLineChange(index, e)}
-                      inputProps={{ min: 0, step: "any" }}
-                      sx={{ width: 120 }}
-                      required
-                    />
-
-                    <TextField
-                      label="Unit"
-                      name="unit"
-                      value={singleMaterial.unit}
-                      sx={{ width: 80 }}
-                      InputProps={{ readOnly: true }}
-                      disabled
-                    />
-
-                    {productMaterials.length > 1 && (
-                      <IconButton
-                        color="error"
-                        onClick={() => handleRemoveMaterialLine(index)}
-                      >
-                        <RemoveCircleOutlineIcon />
-                      </IconButton>
-                    )}
+                {/* Read-only material fields with improved UI */}
+                {productMaterials.length === 0 ? (
+                  <Typography color="text.secondary" sx={{ mb: 2 }}>
+                    No materials found for this product.
+                  </Typography>
+                ) : (
+                  <Box sx={{ mb: 2, bgcolor: '#f5f7fa', borderRadius: 3, p: 2, boxShadow: 1 }}>
+                    <Grid container spacing={2} sx={{ mb: 1 }}>
+                      <Grid item xs={5}><Typography sx={{ fontWeight: 600 }}>Material</Typography></Grid>
+                      <Grid item xs={3}><Typography sx={{ fontWeight: 600 }}>Measurement</Typography></Grid>
+                      <Grid item xs={2}><Typography sx={{ fontWeight: 600 }}>Unit</Typography></Grid>
+                      <Grid item xs={2}><Typography sx={{ fontWeight: 600 }}>Unit Price</Typography></Grid>
+                    </Grid>
+                    {productMaterials.map((singleMaterial, index) => (
+                      <Grid container spacing={2} key={index} alignItems="center" sx={{ mb: 1, bgcolor: '#fff', borderRadius: 2, p: 1, border: '1px solid #e0e0e0' }}>
+                        <Grid item xs={5}>
+                          <TextField
+                            value={singleMaterial.material_name}
+                            label="Material"
+                            InputProps={{ readOnly: true }}
+                            fullWidth
+                          />
+                        </Grid>
+                        <Grid item xs={3}>
+                          <TextField
+                            value={singleMaterial.measurement}
+                            label="Measurement"
+                            InputProps={{ readOnly: true }}
+                            fullWidth
+                          />
+                        </Grid>
+                        <Grid item xs={2}>
+                          <TextField
+                            value={singleMaterial.unit}
+                            label="Unit"
+                            InputProps={{ readOnly: true }}
+                            fullWidth
+                          />
+                        </Grid>
+                        <Grid item xs={2}>
+                          <TextField
+                            value={singleMaterial.unit_price}
+                            label="Unit Price"
+                            InputProps={{ readOnly: true, startAdornment: <Typography sx={{ mr: 1 }}>R</Typography> }}
+                            fullWidth
+                          />
+                        </Grid>
+                      </Grid>
+                    ))}
                   </Box>
-                ))}
-
-                <Button
-                  variant="text"
-                  startIcon={<AddCircleOutlineIcon />}
-                  onClick={handleAddMaterialLine}
-                  sx={{ mt: 1 }}
-                >
-                  Add another material
-                </Button>
+                )}
               </CardContent>
             </Card>
 
@@ -341,8 +355,8 @@ const ProductUpdateModal = ({ open, onClose, product, onUpdate }) => {
               fullWidth
               required
               value={productDetails.selling_price}
-              onChange={handleProductDetailsChange}
-              inputProps={{ min: 0, step: "0.01" }}
+              InputProps={{ readOnly: true }}
+              sx={{ bgcolor: '#f5f5f5', fontWeight: 600 }}
             />
 
             {/* Current Quantity - READ-ONLY DISPLAY */}

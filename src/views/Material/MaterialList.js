@@ -27,7 +27,41 @@ import RestoreIcon from '@mui/icons-material/Restore';
 import ArchiveIcon from '@mui/icons-material/Archive';
 
 const MaterialList = () => {
+  // State declarations must come first
   const [materials, setMaterials] = useState([]);
+  // ...existing code...
+  // Helper: Shorten unit names
+  const getShortUnit = (unit) => {
+    if (!unit) return '';
+    const map = {
+      pieces: 'pcs', piece: 'pcs', pcs: 'pcs', units: 'units', unit: 'unit', items: 'items', item: 'item',
+      kilograms: 'kg', kilogram: 'kg', kg: 'kg', grams: 'g', gram: 'g', g: 'g', meters: 'm', meter: 'm', m: 'm',
+      liters: 'L', liter: 'L', l: 'L', cm: 'cm', ml: 'ml', rolls: 'rolls', packs: 'packs', sheets: 'sheets'
+    };
+    return map[unit?.toLowerCase()] || unit;
+  };
+
+  // Helper: Is unit countable?
+  const isCountableUnit = (unit) => {
+    if (!unit) return false;
+    const countable = ['pcs', 'pieces', 'piece', 'units', 'unit', 'items', 'item', 'rolls', 'packs', 'sheets'];
+    return countable.includes(unit?.toLowerCase());
+  };
+
+  // Helper: Get badge color for unit type
+  const getUnitBadgeColor = (unit) => isCountableUnit(unit) ? 'primary' : 'info';
+
+  // Helper: Highlight low stock
+  const isLowStock = (quantity) => quantity < 10;
+
+  // Sorting
+  const [sortBy, setSortBy] = useState('name');
+  const sortedMaterials = [...materials].sort((a, b) => {
+    if (sortBy === 'name') return a.material_name.localeCompare(b.material_name);
+    if (sortBy === 'quantity') return b.quantity - a.quantity;
+    if (sortBy === 'price') return b.unit_price - a.unit_price;
+    return 0;
+  });
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedMaterial, setSelectedMaterial] = useState(null);
   const [openUpdate, setOpenUpdate] = useState(false);
@@ -130,7 +164,7 @@ const MaterialList = () => {
     }
 
     try {
-      const response = await fetch(`http://localhost:5000/api/material/${updateData.id}`, {
+      const response = await fetch(`http://localhost:5000/api/material/${updateData.material_id}`, {
         method: 'PUT',
         body: formData,
       });
@@ -154,7 +188,7 @@ const MaterialList = () => {
         setError('Cannot add stock to archived materials');
         setTimeout(() => setError(''), 3000);
       } else {
-        console.log(`Add stock for material with ID: ${selectedMaterial.id}`);
+        console.log(`Add stock for material with ID: ${selectedMaterial.material_id}`);
         alert(`Implement "Add Stock" for material: ${selectedMaterial.material_name}`);
       }
     }
@@ -181,7 +215,7 @@ const MaterialList = () => {
   console.log('🚀 Starting archive process...');
 
   try {
-    const url = `http://localhost:5000/api/material/${selectedMaterial.id}/archive`;
+    const url = `http://localhost:5000/api/material/${selectedMaterial.material_id}/archive`;
     console.log('🌐 Making request to:', url);
     
     const response = await fetch(url, {
@@ -228,7 +262,7 @@ console.log('🎭 Dialog states:', { openArchive, openRestore, selectedMaterial:
   const confirmRestore = async () => {
     if (selectedMaterial) {
       try {
-        const response = await fetch(`http://localhost:5000/api/material/${selectedMaterial.id}/restore`, {
+        const response = await fetch(`http://localhost:5000/api/material/${selectedMaterial.material_id}/restore`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -334,18 +368,25 @@ console.log('🎭 Dialog states:', { openArchive, openRestore, selectedMaterial:
          statusFilter === 'inactive' ? 'Archived Materials' : 'All Materials'}
       </Typography>
 
+      {/* Sort Dropdown */}
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 2 }}>
+        <Typography variant="body2" sx={{ fontWeight: 600 }}>Sort by:</Typography>
+        <Select value={sortBy} onChange={e => setSortBy(e.target.value)} size="small" sx={{ minWidth: 120 }}>
+          <MenuItem value="name">Name</MenuItem>
+          <MenuItem value="quantity">Quantity</MenuItem>
+          <MenuItem value="price">Price</MenuItem>
+        </Select>
+      </Box>
       <Grid container spacing={3} sx={{ mt: 1 }}>
-        {materials.length === 0 ? (
+        {sortedMaterials.length === 0 ? (
           <Grid item xs={12}>
             <Typography variant="body1">
-              {statusFilter === 'inactive' ? 
-                'No archived materials found.' : 
-                'No materials found.'}
+              {statusFilter === 'inactive' ? 'No archived materials found.' : 'No materials found.'}
             </Typography>
           </Grid>
         ) : (
-          materials.map((mat) => (
-            <Grid item xs={12} sm={6} md={4} lg={3} key={mat.id}>
+          sortedMaterials.map((mat, idx) => (
+            <Grid item xs={12} sm={6} md={4} lg={3} key={mat.material_id}>
               <Card
                 elevation={3}
                 sx={{
@@ -358,18 +399,11 @@ console.log('🎭 Dialog states:', { openArchive, openRestore, selectedMaterial:
                   flexDirection: 'column',
                   justifyContent: 'center',
                   opacity: mat.status === 'inactive' ? 0.7 : 1,
-                  border: mat.status === 'inactive' ? '2px dashed #ff9800' : 'none'
+                  border: mat.status === 'inactive' ? '2px dashed #ff9800' : 'none',
+                  bgcolor: idx % 2 === 0 ? '#f8fafc' : '#fff',
                 }}
               >
-                <Box
-                  sx={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    mb: 2,
-                  }}
-                >
-
+                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 2 }}>
                   <Avatar
                     variant="rounded"
                     src={mat.image_path ? `/images/materials/${mat.image_path}` : '/images/materials/placeholder.jpg'}
@@ -391,31 +425,33 @@ console.log('🎭 Dialog states:', { openArchive, openRestore, selectedMaterial:
                   <Typography variant="h6" sx={{ fontWeight: 600, textAlign: 'center' }}>
                     {mat.material_name}
                   </Typography>
+                  {/* Category and unit in separate lines, unit in full */}
+                  <Box sx={{ mt: 1, mb: 0.5, textAlign: 'center' }}>
+                    <Typography variant="body2" sx={{ fontWeight: 500, color: 'text.secondary', mb: 0.2 }}>
+                      {mat.category}
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 500, color: getUnitBadgeColor(mat.unit) + ".main" }}>
+                      {mat.unit}
+                    </Typography>
+                  </Box>
                   <Typography
                     variant="body2"
-                    sx={{
-                      color: 'text.secondary',
-                      fontSize: 13,
-                      textAlign: 'center',
-                      mt: 0.5,
-                      letterSpacing: 1,
-                    }}
+                    sx={{ color: 'text.secondary', fontSize: 13, textAlign: 'center', mt: 0.5, letterSpacing: 1 }}
                   >
                     SKU: {mat.sku_code}
                   </Typography>
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      color: 'text.secondary',
-                      fontSize: 15,
-                      textAlign: 'center',
-                      mt: 0.5,
-                      letterSpacing: 1,
-                      fontWeight: 500,
-                    }}
-                  >
-                    R{mat.unit_price ? Number(mat.unit_price).toFixed(2) : '0.00'}
-                  </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mt: 0.5 }}>
+                    <Typography
+                      variant="body2"
+                      sx={{ color: 'text.secondary', fontSize: 15, textAlign: 'center', letterSpacing: 1, fontWeight: 500 }}
+                      title={`Unit Price: R${mat.unit_price ? Number(mat.unit_price).toFixed(2) : '0.00'}`}
+                    >
+                      R{mat.unit_price ? Number(mat.unit_price).toFixed(2) : '0.00'}
+                    </Typography>
+                    <Typography variant="caption" sx={{ ml: 0.5, color: 'text.secondary', fontWeight: 400 }}>
+                      per unit
+                    </Typography>
+                  </Box>
                 </Box>
                 <Box sx={{ width: '100%', mb: 1 }}>
                   <LinearProgress
@@ -424,12 +460,16 @@ console.log('🎭 Dialog states:', { openArchive, openRestore, selectedMaterial:
                     color={getStockBarColor(mat.quantity)}
                     sx={{ height: 8, borderRadius: 5 }}
                   />
-                  <Typography
-                    variant="caption"
-                    sx={{ display: 'block', textAlign: 'right', mt: 0.5, color: 'text.secondary' }}
-                  >
-                    Qty: {mat.quantity}
-                  </Typography>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 0.5 }}>
+                    <Typography
+                      variant="caption"
+                      sx={{ color: isLowStock(mat.quantity) ? 'error.main' : 'text.secondary', fontWeight: isLowStock(mat.quantity) ? 700 : 400 }}
+                      title={isLowStock(mat.quantity) ? 'Low stock!' : 'Stock quantity'}
+                    >
+                      Qty: {mat.quantity}
+                      {isLowStock(mat.quantity) && <Chip label="Low" color="error" size="small" sx={{ ml: 1 }} />}
+                    </Typography>
+                  </Box>
                 </Box>
                 <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 'auto' }}>
                   <IconButton
@@ -440,27 +480,24 @@ console.log('🎭 Dialog states:', { openArchive, openRestore, selectedMaterial:
                     <MoreVertIcon />
                   </IconButton>
 
-<Menu
-  anchorEl={anchorEl}
-  open={Boolean(anchorEl) && selectedMaterial?.id === mat.id}
-  onClose={handleMenuClose}
->
-  {/* Fix: Remove Fragment and use array instead */}
-  {mat.status === 'active' ? [
-    <MenuItem key="update" onClick={handleUpdate}>Update</MenuItem>,
-    /*{ <MenuItem key="addStock" onClick={handleAddStock}>Add Stock</MenuItem>,} */
-    <MenuItem key="archive" onClick={handleArchive} sx={{ color: 'error.main' }}>
-      <ArchiveIcon sx={{ mr: 1 }} fontSize="small" />
-      Archive
-    </MenuItem>
-  ] : [
-    <MenuItem key="restore" onClick={handleRestore} sx={{ color: 'success.main' }}>
-      <RestoreIcon sx={{ mr: 1 }} fontSize="small" />
-      Restore
-    </MenuItem>
-  ]}
-</Menu>
-                    
+                  <Menu
+                    anchorEl={anchorEl}
+                    open={Boolean(anchorEl) && selectedMaterial?.material_id === mat.material_id}
+                    onClose={handleMenuClose}
+                  >
+                    {mat.status === 'active' ? [
+                      <MenuItem key="update" onClick={handleUpdate}>Update</MenuItem>,
+                      <MenuItem key="archive" onClick={handleArchive} sx={{ color: 'error.main' }}>
+                        <ArchiveIcon sx={{ mr: 1 }} fontSize="small" />
+                        Archive
+                      </MenuItem>
+                    ] : [
+                      <MenuItem key="restore" onClick={handleRestore} sx={{ color: 'success.main' }}>
+                        <RestoreIcon sx={{ mr: 1 }} fontSize="small" />
+                        Restore
+                      </MenuItem>
+                    ]}
+                  </Menu>
                 </Box>
               </Card>
             </Grid>

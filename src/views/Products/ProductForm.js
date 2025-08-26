@@ -71,7 +71,7 @@ const ProductForm = () => {
 
       // When material changes, also capture its unit
   if (name === 'materialId') {
-    const selectedMaterial = materialsList.find(m => m.id === value);
+    const selectedMaterial = materialsList.find(m => m.material_id === value);
     if (selectedMaterial) {
       list[index].unit = selectedMaterial.unit;
     }
@@ -115,7 +115,7 @@ const calculateCostOfProduction = () => {
   let total = 0;
   productMaterials.forEach(line => {
     if (line.materialId && line.measurement > 0) {
-      const mat = materialsList.find(m => m.id === line.materialId);
+      const mat = materialsList.find(m => m.material_id === line.materialId);
       if (mat && mat.unit_price) {
         total += parseFloat(mat.unit_price) * parseFloat(line.measurement);
       }
@@ -134,7 +134,7 @@ const prepareMaterialsForSubmission = () => {
   return productMaterials
     .filter(mat => mat.materialId && mat.measurement)
     .map(mat => {
-      const selectedMaterial = materialsList.find(m => m.id === mat.materialId);
+      const selectedMaterial = materialsList.find(m => m.material_id === mat.materialId);
       return {
         materialId: mat.materialId,
         measurement: parseFloat(mat.measurement),
@@ -231,7 +231,7 @@ const prepareMaterialsForSubmission = () => {
                 >
                   {materialsList.length > 0 ? (
                     materialsList.map((mat) => (
-                      <MenuItem key={mat.id} value={mat.id}>
+                      <MenuItem key={mat.material_id} value={mat.material_id}>
                         {mat.material_name} ({mat.unit})
                       </MenuItem>
                     ))

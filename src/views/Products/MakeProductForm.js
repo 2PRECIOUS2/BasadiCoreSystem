@@ -1,48 +1,63 @@
 import React, { useEffect, useState } from 'react';
 import {
-  TextField, MenuItem, Button, Grid, Typography, Paper, Stack
+  TextField, MenuItem, Button, Grid, Typography, Paper, Box, Divider, Alert
 } from '@mui/material';
 
 const MakeProductForm = () => {
   const [products, setProducts] = useState([]);
-  const [materials, setMaterials] = useState([]);
+  const [productMaterials, setProductMaterials] = useState([]);
   const [formData, setFormData] = useState({
     product_id: '',
-    method: '', // "scratch" or "provider"
-    material_id: '',
-    material_cost: 0,
-    service_provider: '',
-    service_location: '',
-    service_cost: '',
-    selling_price: '',
+    method: '',
     quantity: '',
     production_date: '',
-    description: '',
+    provider_id: '',
+    service_cost: '',
   });
+  const [totalCost, setTotalCost] = useState('0.00');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+const [serviceProviders, setServiceProviders] = useState([]);
 
-  // Fetch product and material options
+useEffect(() => {
+  fetch('http://localhost:5000/api/service-providers')
+    .then(res => res.json())
+    .then(data => setServiceProviders(data.data || []))
+    .catch(() => setServiceProviders([]));
+}, []);
+
   useEffect(() => {
-    fetch('http://localhost:5000/api/products') // adjust route
+    fetch('http://localhost:5000/api/products/all')
       .then(res => res.json())
-      .then(setProducts);
-
-    fetch('http://localhost:5000/api/material/all')
-      .then(res => res.json())
-      .then(setMaterials);
+      .then(data => setProducts(data.data || []))
+      .catch(() => setProducts([]))
+      .finally(() => setLoading(false));
   }, []);
 
-  // Calculate cost from selected material
-  const calculateCost = () => {
-    if (formData.method === 'scratch') {
-      const material = materials.find(m => m.id === formData.material_id);
-      if (material && formData.quantity) {
-        return (material.unit_price * formData.quantity).toFixed(2);
-      }
-    } else if (formData.method === 'provider' && formData.service_cost) {
-      return (formData.service_cost * formData.quantity).toFixed(2);
+  useEffect(() => {
+    if (formData.product_id && formData.method === 'scratch') {
+      fetch(`http://localhost:5000/api/products/${formData.product_id}/materials`)
+        .then(res => res.json())
+        .then(data => setProductMaterials(data.data || []))
+        .catch(() => setProductMaterials([]));
+    } else {
+      setProductMaterials([]);
     }
-    return 0;
-  };
+  }, [formData.product_id, formData.method]);
+
+  useEffect(() => {
+    if (formData.method === 'scratch' && productMaterials.length > 0 && formData.quantity) {
+      const materialCost = productMaterials.reduce((sum, m) => {
+        return sum + ((parseFloat(m.unit_price) || 0) * (parseFloat(m.measurement) || 0));
+      }, 0);
+      setTotalCost((materialCost * parseInt(formData.quantity)).toFixed(2));
+    } else if (formData.method === 'provider' && formData.service_cost && formData.quantity) {
+      setTotalCost((parseFloat(formData.service_cost) * parseInt(formData.quantity)).toFixed(2));
+    } else {
+      setTotalCost('0.00');
+    }
+  }, [formData.quantity, formData.method, productMaterials, formData.service_cost]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -50,130 +65,267 @@ const MakeProductForm = () => {
   };
 
   const handleSubmit = async () => {
-    console.log('Submit payload:', { ...formData, production_cost: calculateCost() });
-    // Later: POST to backend
+    if (!formData.method) {
+      setError('Please select a production method.');
+      setTimeout(() => setError(''), 3000);
+      return;
+    }
+    try {
+      const payload = {
+        product_id: formData.product_id,
+        production_method: formData.method,
+        quantity: parseInt(formData.quantity),
+        production_date: formData.production_date,
+        total_cost: parseFloat(totalCost),
+        materials_used: productMaterials.map(material => ({
+          material_id: material.material_id,
+          measurement: material.measurement,
+          unit: material.unit,
+          unit_price: material.unit_price
+        })),
+        provider_id: formData.method === 'provider' ? formData.provider_id : null,
+        cost_of_production: formData.method === 'provider' ? parseFloat(formData.service_cost) : null
+      };
+      console.log('Submitting production payload:', payload);
+      const response = await fetch('http://localhost:5000/api/production', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (response.ok) {
+        setSuccess('Product manufacturing record created successfully!');
+        setFormData({
+          product_id: '',
+          method: '',
+          quantity: '',
+          production_date: '',
+          provider_id: '',
+          service_cost: '',
+        });
+        setProductMaterials([]);
+        setTimeout(() => setSuccess(''), 3000);
+      } else {
+        const errorData = await response.json();
+        setError(errorData.message || 'Failed to create production record');
+        setTimeout(() => setError(''), 3000);
+      }
+    } catch (error) {
+      setError('Error submitting form');
+      setTimeout(() => setError(''), 3000);
+    }
   };
 
-  const [openMakeProductDialog, setOpenMakeProductDialog] = useState(false);
-
-const handleMakeProducts = () => setOpenMakeProductDialog(true);
-const handleCloseMakeProductDialog = () => setOpenMakeProductDialog(false);
+  if (loading) {
+    return (
+      <Paper elevation={4} sx={{
+        p: 5,
+        maxWidth: 600,
+        mx: 'auto',
+        mt: 6,
+        borderRadius: 4,
+        bgcolor: '#f8fafc'
+      }}>
+        <Typography variant="h4" align="center" sx={{ mb: 3, fontWeight: 700 }}>
+          Make Product
+        </Typography>
+        <Typography>Loading products...</Typography>
+      </Paper>
+    );
+  }
 
   return (
-    <Paper sx={{ p: 4, borderRadius: 3, maxWidth: 900, mx: 'auto', mt: 4 }}>
-      <Typography variant="h5" gutterBottom>Make Product</Typography>
-
-      <Grid container spacing={2}>
-        {/* Product Dropdown */}
-        <Grid item xs={12} md={6}>
+    <Paper elevation={4} sx={{
+      p: 5,
+      maxWidth: 600,
+      mx: 'auto',
+      mt: 6,
+      borderRadius: 4,
+      bgcolor: '#f8fafc'
+    }}>
+      <Typography variant="h4" align="center" sx={{ mb: 3, fontWeight: 700 }}>
+        Make Product
+      </Typography>
+      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
+      <Grid container spacing={3}>
+        <Grid item xs={12}>
           <TextField
-            select fullWidth required label="Select Product"
+            select fullWidth required label="Product Name"
             name="product_id" value={formData.product_id}
             onChange={handleChange}
+            size="large"
+            sx={{ fontSize: 20 }}
           >
             {products.map(p => (
-              <MenuItem key={p.id} value={p.id}>{p.product_name}</MenuItem>
+              <MenuItem key={p.product_id} value={p.product_id}>
+                {p.product_name}
+              </MenuItem>
             ))}
           </TextField>
         </Grid>
-
-        {/* Method */}
-        <Grid item xs={12} md={6}>
+        <Grid item xs={12}>
           <TextField
             select fullWidth required label="Production Method"
             name="method" value={formData.method}
             onChange={handleChange}
+            size="large"
           >
             <MenuItem value="scratch">Made from Scratch</MenuItem>
             <MenuItem value="provider">Service Provider</MenuItem>
           </TextField>
         </Grid>
 
-        {/* Material Fields */}
+        {/* Always show material fields for 'scratch' method, display message if none found */}
         {formData.method === 'scratch' && (
-          <>
-            <Grid item xs={12} md={6}>
-              <TextField
-                select fullWidth label="Material Used"
-                name="material_id" value={formData.material_id}
-                onChange={handleChange}
-              >
-                {materials.map(mat => (
-                  <MenuItem key={mat.id} value={mat.id}>
-                    {mat.material_name} (R{mat.unit_price})
-                  </MenuItem>
-                ))}
-              </TextField>
-            </Grid>
-
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth label="Description (from product)"
-                name="description" value={formData.description}
-                onChange={handleChange} disabled
-              />
-            </Grid>
-          </>
+          <Grid item xs={12}>
+            <Box sx={{ mt: 2, mb: 2 }}>
+              <Divider sx={{ mb: 2 }} />
+              <Typography variant="h6" sx={{ mb: 2, fontWeight: 700 }}>
+                Materials Used
+              </Typography>
+              <Grid container spacing={2} sx={{ mb: 2 }}>
+                <Grid item xs={3}><Typography sx={{ fontWeight: 600 }}>Material Name</Typography></Grid>
+                <Grid item xs={3}><Typography sx={{ fontWeight: 600 }}>Measurement</Typography></Grid>
+                <Grid item xs={2}><Typography sx={{ fontWeight: 600 }}>Unit</Typography></Grid>
+                <Grid item xs={4}><Typography sx={{ fontWeight: 600 }}>Unit Price</Typography></Grid>
+              </Grid>
+              {productMaterials.length > 0 ? (
+                productMaterials.map((mat, idx) => (
+                  <Grid container spacing={2} key={mat.product_material_id || idx} alignItems="center" sx={{ mb: 1 }}>
+                    <Grid item xs={3}>
+                      <TextField
+                        value={mat.material_name}
+                        fullWidth
+                        InputProps={{ readOnly: true }}
+                        variant="outlined"
+                      />
+                    </Grid>
+                    <Grid item xs={3}>
+                      <TextField
+                        value={mat.measurement}
+                        fullWidth
+                        InputProps={{ readOnly: true }}
+                        variant="outlined"
+                      />
+                    </Grid>
+                    <Grid item xs={2}>
+                      <TextField
+                        value={mat.unit}
+                        fullWidth
+                        InputProps={{ readOnly: true }}
+                        variant="outlined"
+                      />
+                    </Grid>
+                    <Grid item xs={4}>
+                      <TextField
+                        value={mat.unit_price}
+                        fullWidth
+                        InputProps={{ readOnly: true, startAdornment: <Typography sx={{ mr: 1 }}>R</Typography> }}
+                        variant="outlined"
+                      />
+                    </Grid>
+                  </Grid>
+                ))
+              ) : (
+                <Typography color="text.secondary" sx={{ mt: 2 }}>
+                  No materials found for this product.
+                </Typography>
+              )}
+            </Box>
+          </Grid>
         )}
 
-        {/* Service Provider Fields */}
+        {/* Show service provider fields for 'provider' method immediately after Production Method */}
         {formData.method === 'provider' && (
-          <>
-            <Grid item xs={6}>
-              <TextField
-                label="Service Provider Name" fullWidth name="service_provider"
-                value={formData.service_provider} onChange={handleChange}
-              />
-            </Grid>
-            <Grid item xs={6}>
-              <TextField
-                label="Location" fullWidth name="service_location"
-                value={formData.service_location} onChange={handleChange}
-              />
-            </Grid>
-            <Grid item xs={6}>
-              <TextField
-                label="Service Cost" type="number" fullWidth name="service_cost"
-                value={formData.service_cost} onChange={handleChange}
-              />
-            </Grid>
-          </>
+          <Grid item xs={12}>
+            <Box sx={{ mt: 2, mb: 2 }}>
+              <Divider sx={{ mb: 2 }} />
+              <Typography variant="h6" sx={{ mb: 2, fontWeight: 700 }}>
+                Service Provider
+              </Typography>
+              <Grid container spacing={2} alignItems="center">
+                <Grid item xs={6}>
+                  <TextField
+                    select
+                    label="Service Provider Name"
+                    name="provider_id"
+                    value={formData.provider_id}
+                    onChange={handleChange}
+                    fullWidth
+                    required
+                  >
+                    {serviceProviders.map(sp => (
+                      <MenuItem key={sp.provider_id} value={sp.provider_id}>
+                        {sp.provider_name}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                </Grid>
+                <Grid item xs={6}>
+                  <TextField
+                    label="Service Cost"
+                    name="service_cost"
+                    type="number"
+                    value={formData.service_cost}
+                    onChange={handleChange}
+                    fullWidth
+                    required
+                  />
+                </Grid>
+              </Grid>
+            </Box>
+          </Grid>
         )}
 
-        {/* Quantity, Selling Price, Total */}
-        <Grid item xs={6}>
-          <TextField
-            label="Quantity" type="number" fullWidth name="quantity"
-            value={formData.quantity} onChange={handleChange}
-          />
-        </Grid>
-        <Grid item xs={6}>
-          <TextField
-            label="Selling Price" type="number" fullWidth name="selling_price"
-            value={formData.selling_price} onChange={handleChange}
-          />
-        </Grid>
-
-        {/* Production Date */}
-        <Grid item xs={6}>
-          <TextField
-            label="Production Date" type="date" fullWidth
-            name="production_date" InputLabelProps={{ shrink: true }}
-            value={formData.production_date} onChange={handleChange}
-          />
-        </Grid>
-
-        {/* Total */}
-        <Grid item xs={6}>
-          <Typography variant="subtitle1" sx={{ mt: 2 }}>
-            Total Production Cost: R{calculateCost()}
-          </Typography>
-        </Grid>
-
-        {/* Submit */}
         <Grid item xs={12}>
-          <Button variant="contained" onClick={handleSubmit} fullWidth size="large">
-            Make Product
+          <TextField
+            fullWidth required label="Quantity"
+            name="quantity" type="number"
+            value={formData.quantity}
+            onChange={handleChange}
+            size="large"
+            inputProps={{ min: 1 }}
+          />
+        </Grid>
+        <Grid item xs={12}>
+          <TextField
+            fullWidth required label="Production Date"
+            name="production_date" type="date"
+            value={formData.production_date}
+            onChange={handleChange}
+            InputLabelProps={{ shrink: true }}
+            size="large"
+          />
+        </Grid>
+        <Grid item xs={12}>
+          <Paper sx={{
+            p: 2,
+            bgcolor: '#e0f7fa',
+            borderRadius: 2,
+            textAlign: 'center',
+            fontSize: 22,
+            fontWeight: 600,
+            color: 'primary.main'
+          }}>
+            Total Cost: R{totalCost}
+          </Paper>
+        </Grid>
+        <Grid item xs={12}>
+          <Button
+            variant="contained"
+            color="primary"
+            fullWidth
+            size="large"
+            sx={{ py: 2, fontSize: 18, fontWeight: 700 }}
+            disabled={
+              !formData.product_id ||
+              !formData.method ||
+              !formData.quantity ||
+              !formData.production_date
+            }
+            onClick={handleSubmit}
+          >
+            Make Product Stock
           </Button>
         </Grid>
       </Grid>

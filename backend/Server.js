@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const https = require('https');
+const path = require('path');
 
 // --- Import the CENTRALIZED database module ---
 const db = require('./db'); // This imports the `module.exports` from backend/db/index.js
@@ -19,6 +20,11 @@ app.use(express.json());
 const approvalRoutes = require('./routes/approvalRoutes');
 app.use('/api/approval', approvalRoutes);
 
+const productionRouter = require('./routes/production');
+app.use('/api/production', productionRouter(db.pool));
+
+const serviceProviderRoutes = require('./routes/serviceProvider');
+app.use('/api/service-providers', serviceProviderRoutes(db.pool));
 
 // The materialRoutes now expects the 'pool' to be passed to it as a function argument.
 const materialRoutes = require('./routes/materials');
@@ -28,46 +34,18 @@ const stockRoutes = require('./routes/stock');
 app.use('/api/stock', stockRoutes(db.pool));
 
 const productsRoutes = require('./routes/products');
-const path = require('path');
-app.use('/api/products', productsRoutes);
+app.use('/api/products', productsRoutes(db.pool));
+// Add this line to serve static images
+app.use('/images', express.static(path.join(__dirname, 'public/images')));
 app.use('/images/products', express.static(path.join(__dirname, '../public/images/products')));
-app.use('/images', express.static(path.join(__dirname, '../public/images')));
+//app.use('/images', express.static(path.join(__dirname, '../public/images')));
 
 const customersRoutes = require('./routes/customers');
 app.use('/api/customers', customersRoutes(db.pool));
 console.log('✅ Customers routes registered');
-// User Registration Route - Using `db.pool.connect()`
-app.post('/api/register', async (req, res) => {
-  // ... (your existing registration logic) ...
-  let client;
-  try {
-    client = await db.pool.connect(); // Access the pool from the imported `db` object
-    // ... rest of your registration query using 'client' ...
-  } catch (error) {
-    // ...
-  } finally {
-    if (client) {
-      client.release();
-    }
-  }
-});
 
-// Admin Approval Route - Using `db.pool.connect()`
-app.get('/api/approve-user', async (req, res) => {
-  // ... (your existing approval logic) ...
-  let client;
-  try {
-    client = await db.pool.connect(); // Access the pool from the imported `db` object
-    // ... rest of your approval query using 'client' ...
-  } catch (error) {
-    // ...
-  } finally {
-    if (client) {
-      client.release();
-    }
-  }
-});
-
+const registerRoutes = require('./routes/register');
+app.use('/api/register', registerRoutes(db.pool));
 // Start the server
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);

@@ -21,6 +21,53 @@ const upload = multer({ storage });
 
 module.exports = (pool) => {
 
+  // Add new batch for a material
+  router.post('/add-material-stock', async (req, res) => {
+    const { material_id, supplier_name, quantity, price_bought, unit_price, purchase_date } = req.body;
+    let client;
+    try {
+      client = await pool.connect();
+      await client.query('BEGIN');
+
+      // 1. Get next batch number for this material
+      const batchNumResult = await client.query(
+        `SELECT COALESCE(MAX(batch_number), 0) + 1 AS next_batch_number
+         FROM material_stock_items
+         WHERE material_id = $1`,
+        [material_id]
+      );
+      const nextBatchNumber = batchNumResult.rows[0].next_batch_number;
+
+      // 2. Insert new batch
+      await client.query(
+        `INSERT INTO material_stock_items (
+          material_id, supplier_name, quantity, price_bought, unit_price, created_at, batch_number, batch_status, purchase_date
+        ) VALUES ($1, $2, $3, $4, $5, NOW(), $6, 'active', $7)`,
+        [material_id, supplier_name, quantity, price_bought, unit_price, nextBatchNumber, purchase_date]
+      );
+
+      // 3. Update materials table quantity to sum of active batches
+      const totalQtyResult = await client.query(
+        `SELECT SUM(quantity) AS total_quantity
+         FROM material_stock_items
+         WHERE material_id = $1 AND batch_status = 'active'`,
+        [material_id]
+      );
+      const totalQuantity = totalQtyResult.rows[0].total_quantity || 0;
+      await client.query(
+        `UPDATE materials SET quantity = $1 WHERE material_id = $2`,
+        [totalQuantity, material_id]
+      );
+
+      await client.query('COMMIT');
+      res.status(201).json({ success: true, message: 'Material batch added successfully.' });
+    } catch (error) {
+      await client.query('ROLLBACK');
+      res.status(500).json({ success: false, message: 'Failed to add material batch', error: error.message });
+    } finally {
+      if (client) client.release();
+    }
+  });
   // Add Material
   router.post('/add', upload.single('image'), async (req, res) => {
     const { material_name, unit, category } = req.body;
@@ -126,7 +173,7 @@ module.exports = (pool) => {
     try {
       client = await pool.connect();
 
-      const existing = await client.query('SELECT * FROM materials WHERE id = $1', [id]);
+      const existing = await client.query('SELECT * FROM materials WHERE material_id = $1', [id]);
       if (existing.rows.length === 0) {
         return res.status(404).json({ message: 'Material not found' });
       }
@@ -144,7 +191,7 @@ module.exports = (pool) => {
         query += `, image_path = $${idx++}`;
         params.push(image_path);
       }
-      query += ` WHERE id = $${idx} RETURNING *`;
+      query += ` WHERE material_id = $${idx} RETURNING *`;
       params.push(id);
 
       const result = await client.query(query, params);
@@ -168,7 +215,7 @@ module.exports = (pool) => {
       client = await pool.connect();
       
       const result = await client.query(
-        'UPDATE materials SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
+        'UPDATE materials SET status = $1, updated_at = NOW() WHERE material_id = $2 RETURNING *',
         ['inactive', id]
       );
 
@@ -209,7 +256,7 @@ module.exports = (pool) => {
       client = await pool.connect();
       
       const result = await client.query(
-        'UPDATE materials SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
+        'UPDATE materials SET status = $1, updated_at = NOW() WHERE material_id = $2 RETURNING *',
         ['active', id]
       );
 

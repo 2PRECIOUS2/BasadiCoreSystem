@@ -57,7 +57,7 @@ module.exports = (pool) => {
                     SET quantity = quantity + $1,
                         unit_price = $2,
                         updated_at = NOW()
-                    WHERE id = $3`,
+                    WHERE material_id = $3`,
                     [parsedQuantity, parsedUnitPrice, item.material_id]
                 );
             }
@@ -89,7 +89,7 @@ module.exports = (pool) => {
 
             const itemsRes = await client.query(
                 `SELECT m.material_name, i.* FROM material_stock_items i
-                JOIN materials m ON i.material_id = m.id
+                JOIN materials m ON i.material_id = m.material_id
                 WHERE i.stock_id = $1`,
                 [invoice.id]
             );
