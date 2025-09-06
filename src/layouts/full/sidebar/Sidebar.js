@@ -1,117 +1,92 @@
 import React from 'react';
-import { useMediaQuery, Box, Drawer } from '@mui/material';
+import { useMediaQuery, Box, Drawer, Switch, Typography, Divider } from '@mui/material';
 import SidebarItems from './SidebarItems';
-import { Upgrade } from './Updrade';
 import { Sidebar } from 'react-mui-sidebar';
 import Logo from '../shared/logo/Logo';
 
-const MSidebar = (props) => {
-  const lgUp = useMediaQuery((theme) => theme.breakpoints.up("lg"));
+const MSidebar = ({ mode, setMode, isSidebarOpen, onSidebarClose }) => {
+  const lgUp = useMediaQuery((theme) => theme.breakpoints.up('lg'));
   const sidebarWidth = '270px';
 
-  // Custom CSS for short scrollbar
-  const scrollbarStyles = {
-    '&::-webkit-scrollbar': {
-      width: '7px',
-    },
-    '&::-webkit-scrollbar-thumb': {
-      backgroundColor: '#eff2f7',
-      borderRadius: '15px',
-    },
+  const handleModeToggle = () => {
+    if (setMode) setMode(mode === 'light' ? 'dark' : 'light');
   };
 
+  const sidebarContent = (
+    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between' }}>
+      <Box>
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 3 }}>
+          <Logo />
+        </Box>
+        <SidebarItems />
+        <Divider sx={{ my: 2, mx: 3 }} />
+      </Box>
+      <Box sx={{ px: 3, pb: 3 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <Typography sx={{ color: mode === 'dark' ? '#fff' : '#222', mr: 1 }}>Dark Mode</Typography>
+          <Switch
+            checked={mode === 'dark'}
+            onChange={() => setMode && setMode(mode === 'light' ? 'dark' : 'light')}
+            disabled={!setMode}
+          />
+        </Box>
+      </Box>
+    </Box>
+  );
+
+  // Desktop Sidebar
   if (lgUp) {
     return (
-      <Box
-        sx={{
-          width: sidebarWidth,
-          flexShrink: 0,
-        }}
-      >
-        {/* ------------------------------------------- */}
-        {/* Sidebar for desktop */}
-        {/* ------------------------------------------- */}
+      <Box sx={{ width: sidebarWidth, flexShrink: 0, overflow: 'hidden' }}>
         <Drawer
           anchor="left"
-          open={props.isSidebarOpen}
+          open={isSidebarOpen}
           variant="permanent"
           PaperProps={{
-            sx: {
-              boxSizing: 'border-box',
-              ...scrollbarStyles,
-            },
+            sx: { boxSizing: 'border-box', width: sidebarWidth, 
+              overflow: 'hidden' },
           }}
         >
-          {/* ------------------------------------------- */}
-          {/* Sidebar Box */}
-          {/* ------------------------------------------- */}
-          <Box
-            sx={{
-              height: '100%',
-            }}
+          <Sidebar
+            key={mode} // 🔑 Force re-render on mode change
+            width={sidebarWidth}
+            collapsewidth="80px"
+            open={isSidebarOpen}
+            themeColor="#5d87ff"
+            themeSecondaryColor="#49beff"
+            showProfile={false}
           >
-            <Sidebar
-              width={'270px'}
-              collapsewidth="80px"
-              open={props.isSidebarOpen}
-              themeColor="#5d87ff"
-              themeSecondaryColor="#49beff"
-              showProfile={false}
-            >
-              {/* ------------------------------------------- */}
-              {/* Logo - Centered and padded */}
-              {/* ------------------------------------------- */}
-              <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 3 }}>
-                <Logo />
-              </Box>
-              <Box>
-                {/* ------------------------------------------- */}
-                {/* Sidebar Items */}
-                {/* ------------------------------------------- */}
-                <SidebarItems />
-              </Box>
-            </Sidebar >
-          </Box>
-        </Drawer >
-      </Box >
+            {sidebarContent}
+          </Sidebar>
+        </Drawer>
+      </Box>
     );
   }
+
+  // Mobile Sidebar
   return (
     <Drawer
       anchor="left"
-      open={props.isMobileSidebarOpen}
-      onClose={props.onSidebarClose}
+      open={isSidebarOpen}
+      onClose={onSidebarClose}
       variant="temporary"
       PaperProps={{
-        sx: {
-          boxShadow: (theme) => theme.shadows[8],
-          ...scrollbarStyles,
-        },
+        sx: { boxSizing: 'border-box', width: sidebarWidth, overflow: 'hidden' },
       }}
     >
       <Sidebar
-        width={'270px'}
+        key={mode} // 🔑 Force re-render on mode change
+        width={sidebarWidth}
         collapsewidth="80px"
-        isCollapse={false}
-        mode="light"
-        direction="ltr"
+        open={isSidebarOpen}
         themeColor="#5d87ff"
         themeSecondaryColor="#49beff"
         showProfile={false}
       >
-        {/* ------------------------------------------- */}
-        {/* Logo - Centered and padded */}
-        {/* ------------------------------------------- */}
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 3 }}>
-          <Logo />
-        </Box>
-        {/* ------------------------------------------- */}
-        {/* Sidebar For Mobile */}
-        {/* ------------------------------------------- */}
-        <SidebarItems />
-        <Upgrade />
+        {sidebarContent}
       </Sidebar>
     </Drawer>
   );
 };
+
 export default MSidebar;

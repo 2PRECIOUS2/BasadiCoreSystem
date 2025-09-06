@@ -196,28 +196,46 @@ const CustomersPage = () => {
   return (
     <PageContainer title="Customers" description="Manage your customers">
       <DashboardCard title="">
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3 }}>
-          <Typography 
-            variant="h4" 
-            component="h1" 
-            sx={{ 
-              fontWeight: 'bold',
-              textTransform: 'uppercase',
-              letterSpacing: 1,
-            }}
-          >
-            CUSTOMERS
-          </Typography>
-          
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={handleAddCustomer}
-            sx={{ borderRadius: 2, mt: 1 }}
-          >
-            Add New Customer
-          </Button>
-        </Box>
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 3 }}>
+  <Typography 
+    variant="h4" 
+    component="h1" 
+    sx={{ 
+      fontWeight: 'bold',
+      textTransform: 'uppercase',
+      letterSpacing: 1,
+      mb: 2,
+      textAlign: 'center'
+    }}
+  >
+    CUSTOMERS
+  </Typography>
+  <Box sx={{ width: '100%', display: 'flex', justifyContent: 'flex-end' }}>
+    <Button
+      variant="contained"
+      startIcon={<AddIcon />}
+      onClick={handleAddCustomer}
+      sx={{
+        py: 1.5,
+        fontWeight: 600,
+        letterSpacing: 1,
+        fontSize: 18,
+        borderRadius: 2,
+        background: 'linear-gradient(90deg, #1976d2 60%, #64b5f6 100%)',
+        boxShadow: '0 2px 8px #90caf9',
+        transition: 'transform 0.18s, box-shadow 0.18s',
+        textTransform: 'none',
+        '&:hover': {
+          transform: 'scale(1.05)',
+          boxShadow: '0 4px 16px #90caf9',
+          background: 'linear-gradient(90deg, #1565c0 60%, #42a5f5 100%)'
+        }
+      }}
+    >
+      Add New Customer
+    </Button>
+  </Box>
+</Box>
 
         {error && (
           <Alert 

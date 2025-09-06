@@ -33,37 +33,43 @@ const Register2 = () => (
           justifyContent="center"
           alignItems="center"
         >
-          <Card elevation={9} sx={{ p: 4, zIndex: 1, width: '100%', maxWidth: '500px' }}>
+          <Card elevation={9} sx={{ p: 3, zIndex: 1, width: '100%', maxWidth: '500px' }}>
             <Box display="flex" alignItems="center" justifyContent="center">
               <Logo />
             </Box>
             <AuthRegister
-              // ADD THIS LINE:
-              title="Register for Basadi Core" // Or any title you prefer for the registration form
-              subtext={
-                <Typography variant="subtitle1" textAlign="center" color="textSecondary" mb={1}>
-                  Empower Women. Buy Local.
-                </Typography>
-              }
-              subtitle={
-                <Stack direction="row" justifyContent="center" spacing={1} mt={3}>
-                  <Typography color="textSecondary" variant="h6" fontWeight="400">
-                    Already have an Account?
-                  </Typography>
-                  <Typography
-                    component={Link}
-                    to="/auth/login"
-                    fontWeight="500"
-                    sx={{
-                      textDecoration: 'none',
-                      color: 'primary.main',
-                    }}
-                  >
-                    Sign In
-                  </Typography>
-                </Stack>
-              }
-            />
+            title={
+              <Typography variant="h5" fontWeight="bold" align="center" gutterBottom>
+                Register for Basadi Core
+              </Typography>
+            }
+  subtext={
+    <Typography variant="body2" textAlign="center" color="textSecondary" mb={1}>
+      Empower Women. Buy Local.
+    </Typography>
+  }
+  subtitle={
+    <Stack direction="row" justifyContent="center" alignItems="center" spacing={1} mt={3}>
+      <Typography color="textSecondary" variant="body2" fontWeight="400">
+        Already have an Account?
+      </Typography>
+      <Typography
+        component={Link}
+        to="/auth/login"
+        variant="body2"
+        fontWeight="500"
+        sx={{
+          textDecoration: 'none',
+          color: 'primary.main',
+          ml: 1,
+          cursor: 'pointer'
+        }}
+      >
+        Sign In
+      </Typography>
+    </Stack>
+  }
+/>
           </Card>
         </Grid>
       </Grid>

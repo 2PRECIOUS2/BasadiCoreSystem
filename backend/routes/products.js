@@ -246,11 +246,12 @@ module.exports = (pool) => {
         [product_name, category, cost_of_production, selling_price, quantity, image_path]
       );
 
-      console.log('✅ Product created successfully (add):', result.rows[0].id);
+      const createdProduct = result.rows[0];
+      console.log(`✅ Product created successfully (add): ${createdProduct.product_id} - ${createdProduct.product_name}`);
       res.status(201).json({
         success: true,
-        message: 'Product created successfully',
-        data: result.rows[0]
+        message: `Product created successfully`,
+        data: createdProduct
       });
     } catch (error) {
       console.error('❌ Error creating product (add):', error);

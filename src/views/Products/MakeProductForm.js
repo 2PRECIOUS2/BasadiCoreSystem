@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import {
-  TextField, MenuItem, Button, Grid, Typography, Paper, Box, Divider, Alert
+  TextField, MenuItem, Button, Grid, Typography, Paper, Box, Divider, Alert, Dialog, DialogTitle, DialogContent
 } from '@mui/material';
+
 
 const MakeProductForm = () => {
   const [products, setProducts] = useState([]);
@@ -46,18 +47,32 @@ useEffect(() => {
     }
   }, [formData.product_id, formData.method]);
 
-  useEffect(() => {
-    if (formData.method === 'scratch' && productMaterials.length > 0 && formData.quantity) {
-      const materialCost = productMaterials.reduce((sum, m) => {
-        return sum + ((parseFloat(m.unit_price) || 0) * (parseFloat(m.measurement) || 0));
-      }, 0);
-      setTotalCost((materialCost * parseInt(formData.quantity)).toFixed(2));
-    } else if (formData.method === 'provider' && formData.service_cost && formData.quantity) {
-      setTotalCost((parseFloat(formData.service_cost) * parseInt(formData.quantity)).toFixed(2));
-    } else {
-      setTotalCost('0.00');
-    }
-  }, [formData.quantity, formData.method, productMaterials, formData.service_cost]);
+  const [productCost, setProductCost] = useState(0);
+
+
+useEffect(() => {
+  if (formData.product_id) {
+    fetch(`http://localhost:5000/api/products/${formData.product_id}`)
+      .then(res => res.json())
+      .then(data => {
+        setProductCost(data.data?.cost_of_production || 0);
+      })
+      .catch(() => setProductCost(0));
+  } else {
+    setProductCost(0);
+  }
+}, [formData.product_id]);
+// ...existing code...
+
+useEffect(() => {
+  if (formData.method === 'scratch' && formData.quantity) {
+    setTotalCost((parseFloat(productCost) * parseInt(formData.quantity)).toFixed(2));
+  } else if (formData.method === 'provider' && formData.service_cost && formData.quantity) {
+    setTotalCost((parseFloat(formData.service_cost) * parseInt(formData.quantity)).toFixed(2));
+  } else {
+    setTotalCost('0.00');
+  }
+}, [formData.quantity, formData.method, productCost, formData.service_cost]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -72,20 +87,23 @@ useEffect(() => {
     }
     try {
       const payload = {
-        product_id: formData.product_id,
-        production_method: formData.method,
-        quantity: parseInt(formData.quantity),
-        production_date: formData.production_date,
-        total_cost: parseFloat(totalCost),
-        materials_used: productMaterials.map(material => ({
-          material_id: material.material_id,
-          measurement: material.measurement,
-          unit: material.unit,
-          unit_price: material.unit_price
-        })),
-        provider_id: formData.method === 'provider' ? formData.provider_id : null,
-        cost_of_production: formData.method === 'provider' ? parseFloat(formData.service_cost) : null
-      };
+      product_id: formData.product_id,
+      production_method: formData.method,
+      quantity: parseInt(formData.quantity),
+      production_date: formData.production_date,
+      total_cost: parseFloat(totalCost),
+      materials_used: productMaterials.map(material => ({
+        material_id: material.material_id,
+        measurement: material.measurement,
+        unit: material.unit,
+        unit_price: material.unit_price
+      })),
+      provider_id: formData.method === 'provider' ? formData.provider_id : null,
+      cost_of_production: formData.method === 'provider'
+        ? parseFloat(formData.service_cost)
+        : parseFloat(productCost)
+    };
+        
       console.log('Submitting production payload:', payload);
       const response = await fetch('http://localhost:5000/api/production', {
         method: 'POST',
@@ -176,64 +194,74 @@ useEffect(() => {
         </Grid>
 
         {/* Always show material fields for 'scratch' method, display message if none found */}
-        {formData.method === 'scratch' && (
-          <Grid item xs={12}>
-            <Box sx={{ mt: 2, mb: 2 }}>
-              <Divider sx={{ mb: 2 }} />
-              <Typography variant="h6" sx={{ mb: 2, fontWeight: 700 }}>
-                Materials Used
-              </Typography>
-              <Grid container spacing={2} sx={{ mb: 2 }}>
-                <Grid item xs={3}><Typography sx={{ fontWeight: 600 }}>Material Name</Typography></Grid>
-                <Grid item xs={3}><Typography sx={{ fontWeight: 600 }}>Measurement</Typography></Grid>
-                <Grid item xs={2}><Typography sx={{ fontWeight: 600 }}>Unit</Typography></Grid>
-                <Grid item xs={4}><Typography sx={{ fontWeight: 600 }}>Unit Price</Typography></Grid>
-              </Grid>
-              {productMaterials.length > 0 ? (
-                productMaterials.map((mat, idx) => (
-                  <Grid container spacing={2} key={mat.product_material_id || idx} alignItems="center" sx={{ mb: 1 }}>
-                    <Grid item xs={3}>
-                      <TextField
-                        value={mat.material_name}
-                        fullWidth
-                        InputProps={{ readOnly: true }}
-                        variant="outlined"
-                      />
-                    </Grid>
-                    <Grid item xs={3}>
-                      <TextField
-                        value={mat.measurement}
-                        fullWidth
-                        InputProps={{ readOnly: true }}
-                        variant="outlined"
-                      />
-                    </Grid>
-                    <Grid item xs={2}>
-                      <TextField
-                        value={mat.unit}
-                        fullWidth
-                        InputProps={{ readOnly: true }}
-                        variant="outlined"
-                      />
-                    </Grid>
-                    <Grid item xs={4}>
-                      <TextField
-                        value={mat.unit_price}
-                        fullWidth
-                        InputProps={{ readOnly: true, startAdornment: <Typography sx={{ mr: 1 }}>R</Typography> }}
-                        variant="outlined"
-                      />
-                    </Grid>
-                  </Grid>
-                ))
-              ) : (
-                <Typography color="text.secondary" sx={{ mt: 2 }}>
-                  No materials found for this product.
-                </Typography>
-              )}
-            </Box>
+
+{formData.method === 'scratch' && (
+  <Grid item xs={12}>
+    <Box sx={{ mt: 2, mb: 2 }}>
+      <Divider sx={{ mb: 2 }} />
+      <Typography variant="h6" sx={{ mb: 2, fontWeight: 700 }}>
+        Materials Used
+      </Typography>
+      <Grid container spacing={2} sx={{ mb: 2 }}>
+        <Grid item xs={3}><Typography sx={{ fontWeight: 600 }}>Material Name</Typography></Grid>
+        <Grid item xs={3}><Typography sx={{ fontWeight: 600 }}>Measurement</Typography></Grid>
+        <Grid item xs={2}><Typography sx={{ fontWeight: 600 }}>Unit</Typography></Grid>
+        <Grid item xs={4}><Typography sx={{ fontWeight: 600 }}>Unit Price</Typography></Grid>
+      </Grid>
+      {productMaterials.length > 0 ? (
+        productMaterials.map((mat, idx) => (
+          <Grid container spacing={2} key={mat.product_material_id || idx} alignItems="center" sx={{ mb: 1 }}>
+            <Grid item xs={3}>
+              <TextField
+                value={mat.material_name}
+                fullWidth
+                InputProps={{ readOnly: true }}
+                variant="outlined"
+              />
+            </Grid>
+            <Grid item xs={3}>
+              <TextField
+                value={mat.measurement}
+                fullWidth
+                InputProps={{ readOnly: true }}
+                variant="outlined"
+              />
+            </Grid>
+            <Grid item xs={2}>
+              <TextField
+                value={mat.unit}
+                fullWidth
+                InputProps={{ readOnly: true }}
+                variant="outlined"
+              />
+            </Grid>
+            <Grid item xs={4}>
+              <TextField
+                value={mat.unit_price}
+                fullWidth
+                InputProps={{ readOnly: true, startAdornment: <Typography sx={{ mr: 1 }}>R</Typography> }}
+                variant="outlined"
+              />
+            </Grid>
           </Grid>
-        )}
+        ))
+      ) : (
+        <Typography color="text.secondary" sx={{ mt: 2 }}>
+          No materials found for this product.
+        </Typography>
+      )}
+      {/* Cost of Production (per unit) */}
+      <TextField
+        label="Cost of Production (per unit)"
+        value={productCost}
+        fullWidth
+        InputProps={{ readOnly: true }}
+        variant="outlined"
+        sx={{ mt: 2 }}
+      />
+    </Box>
+  </Grid>
+)}
 
         {/* Show service provider fields for 'provider' method immediately after Production Method */}
         {formData.method === 'provider' && (

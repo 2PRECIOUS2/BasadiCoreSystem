@@ -1,5 +1,18 @@
 import React, { useState } from 'react';
-import { Container, Typography, Divider, Grid, Button, Stack, Fade, Dialog, DialogTitle, DialogContent, IconButton, Box } from '@mui/material';
+import {
+  Container,
+  Typography,
+  Divider,
+  Grid,
+  Button,
+  Stack,
+  Fade,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  IconButton,
+  Box
+} from '@mui/material';
 import MaterialForm from './MaterialForm';
 import MaterialList from './MaterialList';
 import InvoiceList from './InvoiceList';
@@ -13,11 +26,12 @@ const MaterialPage = () => {
 
   const handleAddNewStock = () => setOpenNewStock(true);
   const handleCloseNewStock = () => setOpenNewStock(false);
-  const handleViewInvoice = () => setOpenInvoiceList(true);
-  const handleCloseInvoiceList = () => setOpenInvoiceList(false);
-  
+
   const handleAddNewMaterial = () => setOpenMaterialForm(true);
   const handleCloseMaterialForm = () => setOpenMaterialForm(false);
+
+  const handleViewInvoice = () => setOpenInvoiceList(true);
+  const handleCloseInvoiceList = () => setOpenInvoiceList(false);
 
   return (
     <Container maxWidth="lg" sx={{ pt: 1, pb: 3 }}>
@@ -27,7 +41,7 @@ const MaterialPage = () => {
           gutterBottom
           sx={{
             mt: -4,
-            mb: 4, // Add more bottom margin for spacing
+            mb: 4,
             textAlign: 'center'
           }}
         >
@@ -36,9 +50,8 @@ const MaterialPage = () => {
       </Fade>
       
       <Grid container spacing={4}>
-        {/* Updated Actions Section with better spacing */}
         <Grid item xs={12}>
-          <Box sx={{ mb: 3 }}> {/* Add Box wrapper with margin bottom */}
+          <Box sx={{ mb: 3 }}>
             <Stack direction="row" spacing={2} justifyContent="center">
               <Button
                 variant="contained"
@@ -105,12 +118,10 @@ const MaterialPage = () => {
           </Box>
         </Grid>
 
-        {/* Separator */}
         <Grid item xs={12}>
           <Divider sx={{ my: 2 }} />
         </Grid>
 
-        {/* Materials List Section with pagination */}
         <Grid item xs={12}>
           <MaterialList maxItemsPerPage={16} />
         </Grid>
@@ -139,7 +150,7 @@ const MaterialPage = () => {
       </Dialog>
 
       {/* New Stock Dialog */}
-      <Dialog open={openNewStock} onClose={handleCloseNewStock} maxWidth="md" fullWidth>
+      <Dialog open={openNewStock} onClose={handleCloseNewStock} maxWidth="lg" fullWidth>
         <DialogTitle sx={{ m: 0, p: 2 }}>
           Add New Stock
           <IconButton

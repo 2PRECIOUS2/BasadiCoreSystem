@@ -46,6 +46,19 @@ console.log('✅ Customers routes registered');
 
 const registerRoutes = require('./routes/register');
 app.use('/api/register', registerRoutes(db.pool));
+
+const orderInvoiceRouter = require('./routes/OrderInvoice');
+app.use('/api/order-invoice', orderInvoiceRouter(db.pool));
+
+const ordersRouter = require('./routes/orders'); 
+app.use('/api/orders', ordersRouter(db.pool)); // Pass the db.pool to the router factory function
+
+const orderStatusUpdate = require('./cron/orderStatusUpdate');
+orderStatusUpdate(db.pool);
+
+//const materialBatch = require('./routes/materialBatch');
+//app.use('/api/material-batch', materialBatch(db.pool));
+
 // Start the server
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);

@@ -1,5 +1,5 @@
 import {
-  IconAperture, IconCopy, IconLayoutDashboard,IconBox, IconShoppingCart, IconTag, IconUsers, IconFolder, IconWallet, IconLogin, IconUserPlus /*IconMoodHappy, IconTypography*/
+  IconAperture, IconCopy, IconLayoutDashboard,IconBox, IconShoppingCart, IconTag, IconUsers, IconFolder, IconClock, IconAd, IconWallet, IconLogin, IconUserPlus /*IconMoodHappy, IconTypography*/
 } from '@tabler/icons-react';
 
 import { uniqueId } from 'lodash';
@@ -47,8 +47,8 @@ const Menuitems = [
 
   {
     id: uniqueId(),
-    title: 'Financial Overview',
-    icon: IconWallet,
+    title: 'Employees',
+    icon: IconUserPlus,
     href: '/Financial Overview',
   },
 
@@ -57,6 +57,20 @@ const Menuitems = [
     title: 'Projects',
     icon: IconFolder,
     href: '/Projects',
+  },
+
+  {navlabel: true, subheader: 'Extensions'},
+  {
+    id: uniqueId(),
+    title: 'Advertisement',
+    icon: IconAd || IconAperture,
+    href: '/Advertisement',
+  },
+  {
+    id: uniqueId(),
+    title: 'Timesheet',
+    icon: IconClock,
+    href: '/Timesheet',
   },
   /*{
     navlabel: true,
@@ -74,7 +88,7 @@ const Menuitems = [
     icon: IconCopy,
     href: '/ui/shadow',
   },*/
-  {
+/*  {
     navlabel: true,
     subheader: 'Auth',
   },
@@ -89,7 +103,7 @@ const Menuitems = [
     title: 'Register',
     icon: IconUserPlus,
     href: '/auth/register',
-  },
+  },*/
  /* {
     navlabel: true,
     subheader: 'Extra',

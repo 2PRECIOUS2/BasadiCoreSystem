@@ -1,4 +1,5 @@
 const express = require('express');
+const { route } = require('./approvalRoutes');
 const router = express.Router();
 
 module.exports = (pool) => {
@@ -11,7 +12,8 @@ module.exports = (pool) => {
       quantity,
       production_date,
       materials_used,
-      provider_id
+      provider_id,
+      cost_of_production // <-- Accept from frontend
     } = req.body;
 
     let client;
@@ -38,9 +40,11 @@ module.exports = (pool) => {
         }
       }
 
-      // 2. Calculate cost of production
+      // 2. Calculate cost of production (prefer frontend value if provided)
       let costOfProduction = 0;
-      if (production_method === 'scratch' && materials_used) {
+      if (typeof cost_of_production !== 'undefined' && cost_of_production !== null) {
+        costOfProduction = parseFloat(cost_of_production);
+      } else if (production_method === 'scratch' && materials_used) {
         costOfProduction = materials_used.reduce(
           (sum, mat) => sum + (parseFloat(mat.unit_price) * parseFloat(mat.measurement)),
           0
@@ -122,6 +126,5 @@ module.exports = (pool) => {
       if (client) client.release();
     }
   });
-
-  return router;
+  return route;
 };

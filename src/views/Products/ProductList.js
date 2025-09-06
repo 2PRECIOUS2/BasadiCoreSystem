@@ -19,6 +19,9 @@ import {
   Stack,
   Alert
 } from '@mui/material';
+import EditIcon from '@mui/icons-material/Edit';
+import ArchiveIcon from '@mui/icons-material/Archive';
+import RestoreIcon from '@mui/icons-material/Restore';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
@@ -315,11 +318,18 @@ const ProductList = () => {
                         position: 'relative',
                         background: '#fff',
                         opacity: prod.status === 'archived' ? 0.7 : 1,
-                        border: prod.status === 'archived' ? '2px dashed #ff9800' : '1px solid #eee',
+                        border: prod.status === 'archived' ? '2px dashed #ff9800' : '1px solid #eee'
+                         ? '2px solid #ff9800'
+                         : '2px solid #1976d2', 
                         display: 'flex',
                         flexDirection: 'column',
                         justifyContent: 'flex-start',
                         alignItems: 'center',
+                        transition: 'border-color 0.2s',
+                        '&:hover': {
+                          borderColor: '#1565c0', // Slightly darker blue on hover
+                          boxShadow: '0 4px 16px rgba(25, 118, 210, 0.15)'
+                        }
                       }}
                     >
                       {/* Qty top right with arrow logic */}
@@ -388,17 +398,26 @@ const ProductList = () => {
 
       {/* Context Menu */}
       <Menu
-        anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
-        onClose={handleMenuClose}
-      >
-        {selectedProduct && selectedProduct.status === 'active' ? [
-          <MenuItem key="update" onClick={handleUpdate}>Update</MenuItem>,
-          <MenuItem key="archive" onClick={handleArchive} sx={{ color: 'error.main' }}>Archive</MenuItem>
-        ] : [
-          <MenuItem key="restore" onClick={handleRestore} sx={{ color: 'success.main' }}>Restore</MenuItem>
-        ]}
-      </Menu>
+      anchorEl={anchorEl}
+      open={Boolean(anchorEl)}
+      onClose={handleMenuClose}
+    >
+      {selectedProduct && selectedProduct.status === 'active' ? [
+        <MenuItem key="update" onClick={handleUpdate} sx={{ color: 'primary.main' }}>
+          <EditIcon sx={{ mr: 1, color: '#1976d2' }} fontSize="small" />
+          Update
+        </MenuItem>,
+        <MenuItem key="archive" onClick={handleArchive} sx={{ color: 'error.main' }}>
+          <ArchiveIcon sx={{ mr: 1, color: '#d32f2f' }} fontSize="small" />
+          Archive
+        </MenuItem>
+      ] : [
+        <MenuItem key="restore" onClick={handleRestore} sx={{ color: 'success.main' }}>
+          <RestoreIcon sx={{ mr: 1, color: '#388e3c' }} fontSize="small" />
+          Restore
+        </MenuItem>
+      ]}
+    </Menu>
 
       {/* Archive Confirmation Dialog */}
       <Dialog open={openArchive} onClose={() => setOpenArchive(false)}>

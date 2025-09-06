@@ -98,7 +98,6 @@ module.exports = (pool) => {
   router.get('/', async (req, res) => {
     try {
       console.log('🔍 Starting customer fetch...');
-      
       // Modified SQL query - Include ALL customers (active and archived)
       const result = await pool.query(`
         SELECT 
@@ -126,7 +125,7 @@ module.exports = (pool) => {
           CASE WHEN cust_status = 'active' THEN 1 ELSE 2 END,
           cust_id DESC
       `);
-      
+
       console.log('🔍 SQL returned rows:', result.rows.length);
       if (result.rows.length > 0) {
         console.log('🔍 First SQL row:', result.rows[0]);
@@ -136,40 +135,32 @@ module.exports = (pool) => {
         console.log('🔍 lastName value:', result.rows[0].lastName);
       }
 
-      // Enhanced data transformation
-      const customers = result.rows.map((customer) => {
+      // Enhanced data transformation with order count and amount spent
+      const customers = await Promise.all(result.rows.map(async (customer) => {
         const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD'];
         const randomColor = colors[Math.floor(Math.random() * colors.length)];
-        
+
         const countryAbbr = getCountryAbbreviation(customer.country);
-        
+
         const locationParts = [];
         if (customer.city) locationParts.push(customer.city);
         if (customer.stateProvince) locationParts.push(customer.stateProvince);
         if (customer.country) locationParts.push(countryAbbr);
-        
+
         // Better name handling
         const fullName = customer.customerName?.trim() || 
                          `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || 
                          'Unknown Customer';
-        
+
         const initials = `${customer.firstName?.charAt(0) || ''}${customer.lastName?.charAt(0) || ''}`.toUpperCase() || 'UC';
-        
-        console.log('📊 Processing customer:', {
-          customerNumber: customer.customerNumber,
-          firstName: customer.firstName,
-          lastName: customer.lastName,
-          fullName: fullName,
-          status: customer.status
-        });
-        
+
         // Create comprehensive customer object
         const finalCustomer = {
           // Core identifiers
           id: customer.customerNumber,
           customerNumber: customer.customerNumber,
           customernumber: customer.customerNumber,
-          
+
           // Names (multiple formats for compatibility)
           firstName: customer.firstName || '',
           firstname: customer.firstName || '',
@@ -178,7 +169,7 @@ module.exports = (pool) => {
           customerName: fullName,
           customername: fullName,
           fullName: fullName,
-          
+
           // Contact information
           email: customer.email || '',
           phoneNumber: customer.phoneNumber || '',
@@ -188,7 +179,7 @@ module.exports = (pool) => {
           phonePrefix: customer.phonePrefix || '',
           phoneprefix: customer.phonePrefix || '',
           phone: customer.phone || '',
-          
+
           // Address information
           streetAddress: customer.streetAddress || '',
           streetaddress: customer.streetAddress || '',
@@ -198,13 +189,13 @@ module.exports = (pool) => {
           postalCode: customer.postalCode || '',
           postalcode: customer.postalCode || '',
           country: customer.country || '',
-          
+
           // Personal information
           dateOfBirth: customer.dateOfBirth,
           dateofbirth: customer.dateOfBirth,
           gender: customer.gender || '',
           status: customer.status || 'active',
-          
+
           // Display properties
           customerNumberDisplay: `#${customer.customerNumber}`,
           customernumberdisplay: `#${customer.customerNumber}`,
@@ -212,7 +203,7 @@ module.exports = (pool) => {
           profileColor: randomColor,
           profilecolor: randomColor,
           location: locationParts.join(', '),
-          
+
           // Status colors
           statusColor: customer.status === 'active' ? '#4CAF50' : 
                       customer.status === 'archived' ? '#FF9800' : '#f44336',
@@ -222,23 +213,40 @@ module.exports = (pool) => {
                            customer.status === 'archived' ? '#FFF3E0' : '#FFEBEE',
           statusbackground: customer.status === 'active' ? '#E8F5E8' : 
                            customer.status === 'archived' ? '#FFF3E0' : '#FFEBEE',
-          
+
           // Additional properties
-          orders: 0, // Will be populated when orders system is implemented
+          orders: 0, // Will be updated below
+          amountSpent: 0, // Will be updated below
           createdAt: customer.createdAt,
           updatedAt: customer.updatedAt
         };
-        
+
+        // Fetch order count and amount spent for this customer
+        try {
+          const orderResult = await pool.query(
+            'SELECT COUNT(*) AS order_count, COALESCE(SUM(totalamount), 0) AS amount_spent FROM orders WHERE customerid = $1',
+            [customer.customerNumber]
+          );
+          finalCustomer.orders = parseInt(orderResult.rows[0].order_count, 10) || 0;
+          finalCustomer.amountSpent = parseFloat(orderResult.rows[0].amount_spent) || 0;
+        } catch (err) {
+          console.error(`❌ Error fetching orders for customer ${customer.customerNumber}:`, err);
+          finalCustomer.orders = 0;
+          finalCustomer.amountSpent = 0;
+        }
+
         console.log('🔥 Final customer object:', {
           id: finalCustomer.id,
           customerNumber: finalCustomer.customerNumber,
           fullName: finalCustomer.fullName,
           status: finalCustomer.status,
-          customerNumberDisplay: finalCustomer.customerNumberDisplay
+          customerNumberDisplay: finalCustomer.customerNumberDisplay,
+          orders: finalCustomer.orders,
+          amountSpent: finalCustomer.amountSpent
         });
-        
+
         return finalCustomer;
-      });
+      }));
 
       console.log('🚀 Total customers processed:', customers.length);
       console.log('🚀 Active customers:', customers.filter(c => c.status === 'active').length);
@@ -252,7 +260,9 @@ module.exports = (pool) => {
           firstName: customers[0].firstName,
           lastName: customers[0].lastName,
           fullName: customers[0].fullName,
-          email: customers[0].email
+          email: customers[0].email,
+          orders: customers[0].orders,
+          amountSpent: customers[0].amountSpent
         });
         console.log('🚀 All keys in first customer:', Object.keys(customers[0]));
       }
@@ -267,7 +277,6 @@ module.exports = (pool) => {
           archived: customers.filter(c => c.status === 'archived').length
         }
       });
-      
     } catch (error) {
       console.error('❌ Error fetching customers:', error);
       res.status(500).json({
@@ -278,6 +287,44 @@ module.exports = (pool) => {
     }
   });
 
+  // ...existing code...
+
+
+
+router.get('/:id/order-count', async (req, res) => {
+  try {
+    const customerId = parseInt(req.params.id, 10);
+    console.log('🔎 [order-count] customerId:', customerId);
+    const result = await pool.query(
+      'SELECT COUNT(*) AS order_count FROM orders WHERE customerid = $1',
+      [customerId]
+    );
+    console.log('🔎 [order-count] query result:', result.rows);
+    const orderCount = parseInt(result.rows[0].order_count, 10) || 0;
+    res.json({ success: true, orderCount });
+  } catch (error) {
+    console.error('❌ [order-count] error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// GET amount spent by a customer
+router.get('/:id/amount-spent', async (req, res) => {
+  try {
+    const customerId = parseInt(req.params.id, 10);
+    console.log('🔎 [amount-spent] customerId:', customerId);
+    const result = await pool.query(
+      'SELECT SUM(totalamount) AS amount_spent FROM orders WHERE customerid = $1',
+      [customerId]
+    );
+    console.log('🔎 [amount-spent] query result:', result.rows);
+    const amountSpent = parseFloat(result.rows[0].amount_spent) || 0;
+    res.json({ success: true, amountSpent });
+  } catch (error) {
+    console.error('❌ [amount-spent] error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
   // GET single customer by ID
   router.get('/:id', async (req, res) => {
     try {

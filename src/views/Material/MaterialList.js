@@ -21,14 +21,19 @@ import {
   Chip,
   Alert
 } from '@mui/material';
+import EditIcon from '@mui/icons-material/Edit';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import SearchIcon from '@mui/icons-material/Search';
 import RestoreIcon from '@mui/icons-material/Restore';
 import ArchiveIcon from '@mui/icons-material/Archive';
+import AddIcon from '@mui/icons-material/Add';
+import MaterialForm from './MaterialForm';
 
 const MaterialList = () => {
   // State declarations must come first
   const [materials, setMaterials] = useState([]);
+    const [createModalOpen, setCreateModalOpen] = useState(false);
+
   // ...existing code...
   // Helper: Shorten unit names
   const getShortUnit = (unit) => {
@@ -119,6 +124,12 @@ const MaterialList = () => {
     setSearchValue(''); // Clear search when changing status
   };
 
+  
+  const handleCreateSuccess = () => {
+  setCreateModalOpen(false); // Close modal
+  fetchMaterials();          // Refresh list
+};
+
   const getStockBarColor = (quantity) => {
     const percentage = (quantity / maxQuantity) * 100;
     if (percentage > 80) return 'success';
@@ -191,6 +202,7 @@ const MaterialList = () => {
         console.log(`Add stock for material with ID: ${selectedMaterial.material_id}`);
         alert(`Implement "Add Stock" for material: ${selectedMaterial.material_name}`);
       }
+      
     }
     handleMenuClose();
   };
@@ -253,7 +265,7 @@ const MaterialList = () => {
 // Add debug to dialog open state
 console.log('🎭 Dialog states:', { openArchive, openRestore, selectedMaterial: selectedMaterial?.material_name });
 
-
+ 
   const handleRestore = () => {
     setOpenRestore(true);
     handleMenuClose(false);
@@ -399,8 +411,11 @@ console.log('🎭 Dialog states:', { openArchive, openRestore, selectedMaterial:
                   flexDirection: 'column',
                   justifyContent: 'center',
                   opacity: mat.status === 'inactive' ? 0.7 : 1,
-                  border: mat.status === 'inactive' ? '2px dashed #ff9800' : 'none',
+                  border: mat.status === 'inactive' ? '2px dashed #ff9800' : 'none'
+                  ? '2px solid #ef12faff'
+                  : '2px solid #1976d2',
                   bgcolor: idx % 2 === 0 ? '#f8fafc' : '#fff',
+                    
                 }}
               >
                 <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 2 }}>
@@ -480,20 +495,24 @@ console.log('🎭 Dialog states:', { openArchive, openRestore, selectedMaterial:
                     <MoreVertIcon />
                   </IconButton>
 
+                  {/* In your Menu: */}
                   <Menu
                     anchorEl={anchorEl}
                     open={Boolean(anchorEl) && selectedMaterial?.material_id === mat.material_id}
                     onClose={handleMenuClose}
                   >
                     {mat.status === 'active' ? [
-                      <MenuItem key="update" onClick={handleUpdate}>Update</MenuItem>,
+                      <MenuItem key="update" onClick={handleUpdate} sx={{ color: 'primary.main' }}>
+                        <EditIcon sx={{ mr: 1, color: '#1976d2' }} fontSize="small" />
+                        Update
+                      </MenuItem>,
                       <MenuItem key="archive" onClick={handleArchive} sx={{ color: 'error.main' }}>
-                        <ArchiveIcon sx={{ mr: 1 }} fontSize="small" />
+                        <ArchiveIcon sx={{ mr: 1, color: '#d32f2f' }} fontSize="small" />
                         Archive
                       </MenuItem>
                     ] : [
                       <MenuItem key="restore" onClick={handleRestore} sx={{ color: 'success.main' }}>
-                        <RestoreIcon sx={{ mr: 1 }} fontSize="small" />
+                        <RestoreIcon sx={{ mr: 1, color: '#388e3c' }} fontSize="small" />
                         Restore
                       </MenuItem>
                     ]}

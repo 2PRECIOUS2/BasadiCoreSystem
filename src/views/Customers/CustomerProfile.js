@@ -22,9 +22,35 @@ import LocationOnIcon from '@mui/icons-material/LocationOn';
 import CakeIcon from '@mui/icons-material/Cake';
 import BadgeIcon from '@mui/icons-material/Badge';
 import PublicIcon from '@mui/icons-material/Public';
+import { useEffect, useState } from 'react';
+import axios from 'axios';
+
 
 const CustomerProfile = ({ open, onClose, customer }) => {
+
+const [orderCount, setOrderCount] = useState(0);
+const [amountSpent, setAmountSpent] = useState(0);
+
+  useEffect(() => {
+    if (!customer) return;
+    console.log('CustomerProfile received customer:', customer);
+    const customerId = customer?.id || customer?.customerNumber || customer?.cust_id;
+    console.log('Fetching stats for customerId:', customerId);
+
+    if (customerId) {
+      axios.get(`/api/customers/${customerId}/amount-spent`)
+        .then(res => {
+          if (res.data.success) setAmountSpent(res.data.amountSpent);
+        });
+      axios.get(`/api/customers/${customerId}/order-count`)
+        .then(res => {
+          if (res.data.success) setOrderCount(res.data.orderCount);
+        });
+    }
+  }, [customer]);
+
   if (!customer) return null;
+
 
   // Format date of birth for display
   const formatDate = (dateString) => {
@@ -99,6 +125,7 @@ const CustomerProfile = ({ open, onClose, customer }) => {
   };
 
   const age = calculateAge(customer.dateOfBirth || customer.dateofbirth);
+  
 
   return (
     <Dialog 
@@ -139,7 +166,8 @@ const CustomerProfile = ({ open, onClose, customer }) => {
               {customer.fullName || customer.customerName || customer.customername || 'Unknown Customer'}
             </Typography>
             <Typography variant="body2" sx={{ opacity: 0.9 }}>
-              Customer {customer.customerNumberDisplay || customer.customernumberdisplay || `#${customer.customerNumber || customer.customernumber || customer.id}`}
+              Customer #{customer.cust_id}
+
             </Typography>
           </Box>
         </Box>
@@ -396,29 +424,34 @@ const CustomerProfile = ({ open, onClose, customer }) => {
             <Grid item xs={12}>
               <Card>
                 <CardContent>
-                  <Typography variant="h6" sx={{ 
-                    mb: 2,
-                    color: 'primary.main',
-                    fontWeight: 600
-                  }}>
+                  <Typography variant="h6" sx={{ mb: 2, color: 'primary.main', fontWeight: 600 }}>
                     Additional Information
                   </Typography>
-                  
                   <Grid container spacing={3}>
                     {/* Total Orders */}
-                    <Grid item xs={12} sm={4}>
+                    <Grid item xs={12} sm={3}>
                       <Box>
                         <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
                           Total Orders
                         </Typography>
                         <Typography variant="h4" color="primary.main" sx={{ fontWeight: 600 }}>
-                          {customer.orders || 0}
+                          {orderCount}
                         </Typography>
                       </Box>
                     </Grid>
-
+                    {/* Amount Spent */}
+                    <Grid item xs={12} sm={3}>
+                      <Box>
+                        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                          Amount Spent
+                        </Typography>
+                        <Typography variant="h4" color="primary.main" sx={{ fontWeight: 600 }}>
+                          R{amountSpent.toLocaleString()}
+                        </Typography>
+                      </Box>
+                    </Grid>
                     {/* Account Status */}
-                    <Grid item xs={12} sm={4}>
+                    <Grid item xs={12} sm={3}>
                       <Box>
                         <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
                           Account Status
@@ -428,9 +461,8 @@ const CustomerProfile = ({ open, onClose, customer }) => {
                         </Typography>
                       </Box>
                     </Grid>
-
                     {/* Location Summary */}
-                    <Grid item xs={12} sm={4}>
+                    <Grid item xs={12} sm={3}>
                       <Box>
                         <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
                           Location

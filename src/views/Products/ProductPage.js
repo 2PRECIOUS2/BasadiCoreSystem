@@ -1,5 +1,5 @@
 // src/views/Products/ProductPage.js
-import React, { useState } from 'react'; // Import useState
+import React, { useState } from 'react';
 import {
   Container,
   Typography,
@@ -24,27 +24,21 @@ import MakeProductForm from './makeProductForm';
 import ServiceProvidersDialog from './ServiceProvidersDialog';
 
 const ProductPage = () => {
-  // State to control the visibility of the "Add New Product" form dialog
   const [openAddProductDialog, setOpenAddProductDialog] = useState(false);
   const [openServiceProvidersDialog, setOpenServiceProvidersDialog] = useState(false);
+  // Remove products state, ProductList will fetch products itself
+  const [openMakeProductDialog, setOpenMakeProductDialog] = useState(false);
 
-  // Function to open the dialog
   const handleAddNewProduct = () => {
     setOpenAddProductDialog(true);
   };
 
-  // Function to close the dialog
   const handleCloseAddProductDialog = () => {
     setOpenAddProductDialog(false);
-    // Optionally, you might want to refresh the product list here
-    // after a new product is potentially added. This would require
-    // passing a callback to ProductForm.
   };
 
-const [openMakeProductDialog, setOpenMakeProductDialog] = useState(false);
-
-const handleMakeProducts = () => setOpenMakeProductDialog(true);
-const handleCloseMakeProductDialog = () => setOpenMakeProductDialog(false);
+  const handleMakeProducts = () => setOpenMakeProductDialog(true);
+  const handleCloseMakeProductDialog = () => setOpenMakeProductDialog(false);
   return (
     <Container maxWidth="lg" sx={{ pt: 2, pb: 3 }}>
       <Typography
@@ -166,7 +160,7 @@ const handleCloseMakeProductDialog = () => setOpenMakeProductDialog(false);
           </IconButton>
         </DialogTitle>
         <DialogContent dividers>
-          <ProductForm />
+          <ProductForm onProductAdded={handleCloseAddProductDialog} />
         </DialogContent>
       </Dialog>
 

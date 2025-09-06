@@ -171,6 +171,9 @@ const prepareMaterialsForSubmission = () => {
       setProductMaterials([{ materialId: '', measurement: '', unit: '', saved: false }]);
       setCostOfProduction(0);
       setImage(null);
+    //if (onProductAdded) {
+          //onProductAdded(); // Call parent function to refresh products
+   // }
     } else {
       setMessage({ type: 'error', text: 'Failed to add product.' });
     }
@@ -337,6 +340,7 @@ const prepareMaterialsForSubmission = () => {
         <TextField
           type="file"
           onChange={(e) => setImage(e.target.files[0])}
+           inputProps={{ accept: 'image/*' }}
         />
 
         {message && <Alert severity={message.type}>{message.text}</Alert>}

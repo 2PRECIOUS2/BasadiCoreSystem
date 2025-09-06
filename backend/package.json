@@ -3,8 +3,12 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "NODE_OPTIONS=--max_old_space_size=4096 react-scripts build",
+    "start": "react-scripts start",
+    "dev": "set NODE_OPTIONS=--max_old_space_size=4096 && react-scripts start"
   },
+  
   "keywords": [],
   "author": "",
   "license": "ISC",

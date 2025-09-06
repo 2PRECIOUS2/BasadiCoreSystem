@@ -18,6 +18,12 @@ export default defineConfig({
         include: /src\/.*\.jsx?$/,
         exclude: [],
     },
+
+      server: {
+    proxy: {
+      '/api': 'http://localhost:5000'
+    }
+  },
     optimizeDeps: {
         esbuildOptions: {
             plugins: [
