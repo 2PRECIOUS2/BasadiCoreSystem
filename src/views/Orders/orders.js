@@ -7,12 +7,15 @@ import AddOrdersForm from './AddOrdersForm';
 
 const Orders = () => {
   const [openAddOrderDialog, setOpenAddOrderDialog] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const handleAddOrder = () => {
     setOpenAddOrderDialog(true);
   };
   const handleCloseAddOrderDialog = () => {
     setOpenAddOrderDialog(false);
+    // Refresh the orders list when closing the dialog
+    setRefreshKey(prev => prev + 1);
   };
 
   return (
@@ -47,7 +50,7 @@ const Orders = () => {
         Add New Order
       </Button>
       </Box>
-      <OrdersList filterSize={6} searchSize={12} />
+      <OrdersList filterSize={6} searchSize={12} key={refreshKey} />
 
       {/* Full Screen Add Order Dialog */}
       <Dialog

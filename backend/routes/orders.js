@@ -1,53 +1,94 @@
 const express = require('express');
 const router = express.Router();
 module.exports = (pool) => {
-// GET /api/orders
- 
+
+// GET /api/orders - Fixed SQL query
 router.get('/', async (req, res) => {
   try {
+    console.log('Fetching orders...');
     const orders = await pool.query(`
       SELECT 
         o.orderno,
-        c.cust_fname || ' ' || c.cust_lname AS customer_name,
+        CASE 
+          WHEN o.order_type = 'project' THEN COALESCE(o.cust_fname || ' ' || o.cust_lname, 'Unknown')
+          ELSE COALESCE(c.cust_fname || ' ' || c.cust_lname, 'Unknown')
+        END AS customer_name,
         o.deliverydate,
         o.deliveryaddress,
         o.totalamount,
         o.orderstatus,
-        o.comment
+        o.comment,
+        o.order_type,
+        o.cust_fname,
+        o.cust_lname,
+        o.project_id,
+        p.project_name AS project_name
       FROM orders o
       LEFT JOIN customers c ON o.customerid = c.cust_id
+      LEFT JOIN projects p ON o.project_id = p.project_id
       ORDER BY o.orderno DESC
     `);
 
+    console.log(`Found ${orders.rows.length} orders`);
+
     const formattedOrders = orders.rows.map(order => {
-  let addrObj = {};
-  try {
-    // deliveryaddress is already JSON in your DB, parse just in case
-    addrObj = typeof order.deliveryaddress === 'string'
-      ? JSON.parse(order.deliveryaddress)
-      : order.deliveryaddress || {};
-  } catch {
-    addrObj = {};
-  }
+      console.log('Processing order:', order.orderno, 'Address:', order.deliveryaddress);
+      
+      let addrObj = {};
+      try {
+        if (order.deliveryaddress) {
+          addrObj = typeof order.deliveryaddress === 'string'
+            ? JSON.parse(order.deliveryaddress)
+            : order.deliveryaddress;
+        }
+      } catch (parseError) {
+        console.error('Error parsing address for order', order.orderno, ':', parseError);
+        addrObj = {};
+      }
 
-  return {
-    orderno: order.orderno,
-    customer: order.customer_name || 'Unknown',
-    deliveryAddress: `${addrObj.streetAddress || ''}, ${addrObj.city || ''}, ${addrObj.country || ''}`, // table view
-    deliveryaddress: addrObj, // full object for modal
-    deliverydate: order.deliverydate,
-    totalamount: Number(order.totalamount),
-    status: order.orderstatus.charAt(0).toUpperCase() + order.orderstatus.slice(1),
-    comment: order.comment || ''
-  };
-});
+      // Format address consistently
+      let formattedAddress = 'No address';
+      if (addrObj && typeof addrObj === 'object') {
+        const street = addrObj.streetAddress || addrObj.street_address || '';
+        const city = addrObj.city || '';
+        const state = addrObj.stateProvince || addrObj.state_province || '';
+        const postal = addrObj.postalCode || addrObj.postal_code || '';
+        const country = addrObj.country || '';
+        
+        const addressParts = [street, city, state, postal, country]
+          .filter(part => part && part.trim() && part !== 'null');
+        
+        if (addressParts.length > 0) {
+          formattedAddress = addressParts.join(', ');
+        }
+      }
 
+      return {
+        orderno: order.orderno,
+        customer: order.customer_name || 'Unknown',
+        deliveryAddress: formattedAddress,
+        deliveryaddress: addrObj,
+        deliverydate: order.deliverydate,
+        totalamount: Number(order.totalamount) || 0,
+        status: order.orderstatus ? order.orderstatus.charAt(0).toUpperCase() + order.orderstatus.slice(1) : 'Unknown',
+        comment: order.comment || '',
+        order_type: order.order_type || 'standard',
+        project_id: order.project_id,
+        project_name: order.project_name || null
+      };
+    });
 
+    console.log('Sending formatted orders:', formattedOrders.length);
     res.json(formattedOrders);
 
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to fetch orders' });
+    console.error('Error fetching orders:', err);
+    console.error('Error details:', err.message);
+    console.error('Error stack:', err.stack);
+    res.status(500).json({ 
+      error: 'Failed to fetch orders', 
+      details: err.message 
+    });
   }
 });
 
@@ -63,16 +104,55 @@ router.put('/:orderno', async (req, res) => {
     );
     res.json({ success: true, message: 'Order updated successfully' });
   } catch (err) {
-    console.error(err);
+    console.error('Error updating order:', err);
     res.status(500).json({ error: 'Failed to update order' });
   }
 });
 
-  // Create new order
-  router.post('/', async (req, res) => {
+// Create new order - Updated to handle project_id
+router.post('/', async (req, res) => {
   const client = await pool.connect();
   try {
-    const { cust_id, delivery_address, delivery_date, comment, items, payment_method = 'cash', amount_paid = 0 } = req.body;
+    const {
+      cust_id,
+      delivery_address,
+      delivery_date,
+      comment,
+      items,
+      payment_method = 'cash',
+      amount_paid = 0,
+      order_type = 'standard',
+      cust_fname,
+      cust_lname,
+      project_address,
+      order_date,
+      project_id
+    } = req.body;
+
+    console.log('Creating order with data:', { 
+      order_type, 
+      project_id, 
+      cust_fname, 
+      cust_lname,
+      delivery_address,
+      project_address 
+    });
+
+    // Validation: For project orders, first name, last name, and project are required
+    if (order_type === 'project') {
+      if (!cust_fname || !cust_lname) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'First name and last name are required for project orders' 
+        });
+      }
+      if (!project_id) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Project selection is required for project orders' 
+        });
+      }
+    }
 
     await client.query('BEGIN');
 
@@ -97,38 +177,54 @@ router.put('/:orderno', async (req, res) => {
     const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
     const totalAmount = items.reduce((sum, item) => sum + item.quantity * item.unit_price, 0);
 
-    // 3️⃣ Determine order status
-    const orderStatus = new Date(delivery_date) < new Date() ? 'delivered' : 'pending';
+    // 3️⃣ Determine order status and delivery date
+    let orderStatus = 'pending';
+    let deliveryDateToSave = delivery_date;
+    let deliveryAddressToSave = delivery_address;
 
-    // 4️⃣ Insert order
+    if (order_type === 'project') {
+      orderStatus = 'delivered';
+      deliveryDateToSave = order_date;
+      deliveryAddressToSave = project_address;
+    }
+
+    console.log('Final address to save:', deliveryAddressToSave);
+
+    // 4️⃣ Insert order with project_id
     const orderRes = await client.query(
       `INSERT INTO orders 
-       (customerid, deliveryaddress, deliverydate, comment, totalamount, totalitems, orderstatus, createdat, updatedat)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,NOW(),NOW()) RETURNING orderno`,
-      [cust_id, delivery_address, delivery_date, comment, totalAmount, totalItems, orderStatus]
+       (customerid, deliveryaddress, deliverydate, comment, totalamount, totalitems, orderstatus, createdat, updatedat, order_type, cust_fname, cust_lname, project_id)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,NOW(),NOW(),$8,$9,$10,$11) RETURNING orderno`,
+      [
+        cust_id || null,
+        JSON.stringify(deliveryAddressToSave),
+        deliveryDateToSave,
+        comment,
+        totalAmount,
+        totalItems,
+        orderStatus,
+        order_type,
+        order_type === 'project' ? cust_fname : null,
+        order_type === 'project' ? cust_lname : null,
+        order_type === 'project' ? project_id : null
+      ]
     );
     const orderno = orderRes.rows[0].orderno;
 
     // 5️⃣ Insert order items and deduct stock
-    // ...existing code...
-for (const item of items) {
-  await client.query(
-    `INSERT INTO orderitems (orderno, productid, quantity, unitprice) VALUES ($1,$2,$3,$4)`,
-    [orderno, item.product_id, item.quantity, item.unit_price]
-  );
+    for (const item of items) {
+      await client.query(
+        `INSERT INTO orderitems (orderno, productid, quantity, unitprice) VALUES ($1,$2,$3,$4)`,
+        [orderno, item.product_id, item.quantity, item.unit_price]
+      );
 
-  // Log product_id and quantity before update
-  console.log(`Attempting to update product:`, item.product_id, 'Quantity:', item.quantity);
-
-  const updateRes = await client.query(
-    `UPDATE products
-     SET quantity = quantity - $1
-     WHERE product_id = $2`,
-    [item.quantity, item.product_id]
-  );
-  console.log(`Updated product ${item.product_id}, affected rows:`, updateRes.rowCount);
-}
-// ...existing code...
+      await client.query(
+        `UPDATE products
+         SET quantity = quantity - $1
+         WHERE product_id = $2`,
+        [item.quantity, item.product_id]
+      );
+    }
 
     // 6️⃣ Create invoice
     const invoiceRes = await client.query(
@@ -148,57 +244,56 @@ for (const item of items) {
 
   } catch (err) {
     await client.query('ROLLBACK');
-    console.error('Order creation failed', err.message);
+    console.error('Order creation failed:', err.message);
     res.status(400).json({ success: false, message: err.message });
   } finally {
     client.release();
   }
 });
 
+//Cancel Order
+router.put('/:orderno/cancel', async (req, res) => {
+  const { orderno } = req.params;
+  try {
+    const orderRes = await pool.query(
+      "SELECT orderstatus FROM orders WHERE orderno = $1",
+      [orderno]
+    );
 
-  //Cancel Order
-    router.put('/:orderno/cancel', async (req, res) => {
-    const { orderno } = req.params;
-    try {
-      const orderRes = await pool.query(
-        "SELECT orderstatus FROM orders WHERE orderno = $1",
-        [orderno]
-      );
+    if (!orderRes.rows.length) return res.status(404).json({ error: 'Order not found' });
 
-      if (!orderRes.rows.length) return res.status(404).json({ error: 'Order not found' });
-
-      if (orderRes.rows[0].orderstatus.toLowerCase() !== 'pending') {
-        return res.status(400).json({ error: 'Only pending orders can be cancelled' });
-      }
-
-      const itemsRes = await pool.query(
-        "SELECT productid, quantity FROM orderitems WHERE orderno = $1",
-        [orderno]
-      );
-
-      await pool.query('BEGIN');
-
-      for (const item of itemsRes.rows) {
-        await pool.query(
-          `UPDATE products SET quantity = quantity + $1 WHERE product_id = $2`,
-          [item.quantity, item.productid]
-        );
-      }
-
-      await pool.query(
-        `UPDATE orders SET orderstatus='cancelled', updatedat=NOW() WHERE orderno=$1`,
-        [orderno]
-      );
-
-      await pool.query('COMMIT');
-      res.json({ message: 'Order cancelled successfully' });
-
-    } catch (err) {
-      try { await pool.query('ROLLBACK'); } catch {}
-      console.error(err);
-      res.status(500).json({ error: 'Failed to cancel order', details: err.message });
+    if (orderRes.rows[0].orderstatus.toLowerCase() !== 'pending') {
+      return res.status(400).json({ error: 'Only pending orders can be cancelled' });
     }
-  });
 
-  return router; // <--- MUST return router
+    const itemsRes = await pool.query(
+      "SELECT productid, quantity FROM orderitems WHERE orderno = $1",
+      [orderno]
+    );
+
+    await pool.query('BEGIN');
+
+    for (const item of itemsRes.rows) {
+      await pool.query(
+        `UPDATE products SET quantity = quantity + $1 WHERE product_id = $2`,
+        [item.quantity, item.productid]
+      );
+    }
+
+    await pool.query(
+      `UPDATE orders SET orderstatus='cancelled', updatedat=NOW() WHERE orderno=$1`,
+      [orderno]
+    );
+
+    await pool.query('COMMIT');
+    res.json({ message: 'Order cancelled successfully' });
+
+  } catch (err) {
+    try { await pool.query('ROLLBACK'); } catch {}
+    console.error('Cancel order error:', err);
+    res.status(500).json({ error: 'Failed to cancel order', details: err.message });
+  }
+});
+
+return router;
 };

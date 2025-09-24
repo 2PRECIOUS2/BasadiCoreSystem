@@ -61,9 +61,7 @@ const ViewOrderInvoice = ({ open, onClose, orderno }) => {
                 Invoice #{invoiceData.invoice?.invoiceno || '-'}
               </Typography>
               <Typography>Order Number: {invoiceData.order.orderno}</Typography>
-              <Typography>
-                Order Date: {new Date(invoiceData.order.createdat).toLocaleDateString()}
-              </Typography>
+              <Typography> Order Type: {invoiceData.order.ordertype || 'N/A'}</Typography>
               <Typography>
                 Delivery Date: {new Date(invoiceData.order.deliverydate).toLocaleDateString()}
               </Typography>

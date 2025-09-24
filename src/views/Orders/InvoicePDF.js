@@ -32,7 +32,7 @@ const InvoicePDF = ({ orderData }) => {
         <View style={styles.section}>
           <Text style={styles.header}>Invoice #{invoice?.invoiceno || 'N/A'}</Text>
           <Text>Order Number: {order.orderno}</Text>
-          <Text>Order Date: {new Date(order.createdat).toLocaleDateString()}</Text>
+          <Text>Order Type: {order.order_type || 'N/A'}</Text>
           <Text>Delivery Date: {new Date(order.deliverydate).toLocaleDateString()}</Text>
           <Text>Status: {order.orderstatus}</Text>
           <Text>Payment Method: {invoice?.paymentmethod || 'N/A'}</Text>

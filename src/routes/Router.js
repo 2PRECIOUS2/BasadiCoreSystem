@@ -6,6 +6,7 @@ import ProductPage from '../views/Products/ProductPage';
 import CustomersPage from '../views/Customers/CustomersPage';
 import orders from '../views/Orders/orders';
 import AddOrdersForm from '../views/Orders/AddOrdersForm';
+import EmployeesPage from '../views/Employees/EmployeesPage';
 import { useNavigate } from 'react-router-dom';
 /* ***Layouts**** */
 const FullLayout = Loadable(lazy(() => import('../layouts/full/FullLayout')));
@@ -18,8 +19,8 @@ const Material = Loadable(lazy(() => import('../views/Material/material')))
 const product = Loadable(lazy(() => import('../views/Products/ProductPage')))
 const customers = Loadable(lazy(() => import('../views/Customers/CustomersPage')))
 const Orders = Loadable(lazy(() => import('../views/Orders/orders')))
-const financialOverview = Loadable(lazy(() => import('../views/Financial Overview/financialOverview')))
-const projects = Loadable(lazy(() => import('../views/Projects/projects')))
+const Employees = Loadable(lazy(() => import('../views/Employees/EmployeesPage')))
+const Projects = Loadable(lazy(() => import('../views/Projects/projects')))
 //const SamplePage = Loadable(lazy(() => import('../views/sample-page/SamplePage')))
 //const Icons = Loadable(lazy(() => import('../views/icons/Icons')))
 //const TypographyPage = Loadable(lazy(() => import('../views/utilities/TypographyPage')))
@@ -43,8 +44,8 @@ const Router = [
       {path: 'Customers', exact: true, element: <CustomersPage /> },
       { path: 'Orders', exact: true, element: <Orders /> },
       { path: 'Orders/AddOrderForm', exact: true, element: <AddOrdersForm /> },
-      { path: 'Financial Overview', exact: true, element: <financialOverview /> },
-      { path: 'Projects', exact: true, element: <projects /> },
+  { path: 'Employees', exact: true, element: <Employees/> },
+  { path: 'Projects', exact: true, element: <Projects /> },
       {path: 'Advertisement', exact: true, element: <Advertisement /> },
       {path: 'Timesheet', exact: true, element: <Timesheet /> },
       //{ path: '/sample-page', exact: true, element: <SamplePage /> },

@@ -56,6 +56,11 @@ app.use('/api/orders', ordersRouter(db.pool)); // Pass the db.pool to the router
 const orderStatusUpdate = require('./cron/orderStatusUpdate');
 orderStatusUpdate(db.pool);
 
+const employeesRoutes = require('./routes/employess');
+app.use('/api/employees', employeesRoutes(db.pool));
+
+const projectsRouter = require('./routes/projects');
+app.use('/api/projects', projectsRouter(db.pool));
 //const materialBatch = require('./routes/materialBatch');
 //app.use('/api/material-batch', materialBatch(db.pool));
 

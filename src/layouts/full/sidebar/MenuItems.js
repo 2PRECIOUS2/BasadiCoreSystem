@@ -49,7 +49,7 @@ const Menuitems = [
     id: uniqueId(),
     title: 'Employees',
     icon: IconUserPlus,
-    href: '/Financial Overview',
+    href: '/Employees',
   },
 
   {

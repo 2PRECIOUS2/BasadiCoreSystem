@@ -67,6 +67,20 @@ const OrdersList = () => {
     fetchOrders();
   }, []);
 
+  // Add this useEffect to refresh when the component becomes visible
+  useEffect(() => {
+    const handleFocus = () => {
+      fetchOrders();
+    };
+    
+    // Refresh on window focus (when user comes back to the tab)
+    window.addEventListener('focus', handleFocus);
+    
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, []);
+
   // Filters
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
@@ -215,8 +229,8 @@ const OrdersList = () => {
                                       <Typography>{order.customer}</Typography>
                   </Box>
                 </TableCell>
-                <TableCell>{order.deliverydate ? new Date(order.deliverydate).toLocaleDateString() : ''}</TableCell>
-                <TableCell>{order.deliveryAddress || order.deliveryaddress?.streetAddress || ''}</TableCell>
+                <TableCell>{order.deliverydate ? new Date(order.deliverydate).toLocaleDateString('en-CA') : 'No date'}</TableCell>
+                <TableCell>{order.deliveryAddress || 'No address provided'}</TableCell>
                 <TableCell>R{order.totalamount.toFixed(2)}</TableCell>
                 <TableCell>
                   <Chip label={order.status} color={statusColors[order.status] || 'default'} variant="outlined" sx={{ fontWeight: 700 }} />

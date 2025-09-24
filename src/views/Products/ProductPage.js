@@ -20,7 +20,7 @@ import { useNavigate } from 'react-router-dom';
 
 import ProductForm from './ProductForm';
 import ProductList from './ProductList';
-import MakeProductForm from './makeProductForm';
+import MakeProductForm from './MakeProductForm';
 import ServiceProvidersDialog from './ServiceProvidersDialog';
 
 const ProductPage = () => {

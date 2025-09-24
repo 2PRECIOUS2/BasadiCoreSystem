@@ -11,7 +11,7 @@ router.get('/:orderno', async (req, res) => {
     console.log('Fetching order:', orderno);
 
     const orderRes = await pool.query(`
-      SELECT o.orderno, o.deliveryaddress, o.deliverydate, o.totalamount, o.totalitems, o.orderstatus,
+      SELECT o.orderno, o.order_type, o.deliveryaddress, o.deliverydate, o.totalamount, o.totalitems, o.orderstatus,
              o.comment, c.cust_fname, c.cust_lname, c.street_address, c.city, c.state_province, c.postal_code, c.country
       FROM orders o
       LEFT JOIN customers c ON o.customerid = c.cust_id
