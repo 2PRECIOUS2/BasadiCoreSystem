@@ -1,7 +1,8 @@
-const express = require('express');
+import express from 'express';
+
 const router = express.Router();
 
-module.exports = (pool) => {
+const employeesRoutes = (pool) => {
   // create employee
 router.post('/', async (req, res) => {
   const {
@@ -236,3 +237,5 @@ router.put('/:id/restore', async (req, res) => {
 
     return router;
 };
+
+export default employeesRoutes;

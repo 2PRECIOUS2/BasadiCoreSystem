@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { TextField, Button, MenuItem, Stack, Alert, Typography, Paper } from '@mui/material';
 import { Grow, Fade } from '@mui/material';
+import { API_BASE_URL } from '../../config';
 
 const MaterialForm = ({ onSuccess }) => { // Add onSuccess prop
   const [material, setMaterial] = useState({
@@ -26,8 +27,9 @@ const MaterialForm = ({ onSuccess }) => { // Add onSuccess prop
     if (image) formData.append('image', image);
     
     try {
-      const res = await fetch('http://localhost:5000/api/material/add', {
+      const res = await fetch(`${API_BASE_URL}/api/material/add`, {
         method: 'POST',
+        credentials: 'include',
         body: formData,
       });
       

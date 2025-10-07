@@ -1,7 +1,7 @@
-const express = require('express');
+import express from 'express';
 const router = express.Router();
 
-module.exports = (pool) => {
+const serviceProviderRoutes = (pool) => {
   
   // GET all service providers
   router.get('/', async (req, res) => {
@@ -61,3 +61,5 @@ module.exports = (pool) => {
 
   return router;
 };
+
+export default serviceProviderRoutes;

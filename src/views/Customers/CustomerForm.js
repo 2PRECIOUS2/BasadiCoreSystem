@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -9,11 +10,14 @@ import {
   Alert,
   Autocomplete,
   InputAdornment,
-  CircularProgress
+  CircularProgress,
+  Paper
 } from '@mui/material';
 import PersonIcon from '@mui/icons-material/Person';
 import EmailIcon from '@mui/icons-material/Email';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
+import PhoneIcon from '@mui/icons-material/Phone';
+import CakeIcon from '@mui/icons-material/Cake';
 
 const genderOptions = ['Male', 'Female', 'Other', 'Prefer not to say'];
 
@@ -28,16 +32,14 @@ const CustomerForm = ({ customer, onSubmit, onCancel }) => {
     city: '',
     stateProvince: '',
     postalCode: '',
-    country: null,        // Contact info country (code)
-    addressCountry: null, // Address info country (name)
+    country: null,
+    addressCountry: null,
     dateOfBirth: '',
     gender: ''
   });
 
   const [errors, setErrors] = useState({});
   const [submitError, setSubmitError] = useState('');
-
-  // API data
   const [countries, setCountries] = useState([]);
   const [states, setStates] = useState([]);
   const [cities, setCities] = useState([]);
@@ -45,7 +47,6 @@ const CustomerForm = ({ customer, onSubmit, onCancel }) => {
   const [loadingCities, setLoadingCities] = useState(false);
   const [loadingPostal, setLoadingPostal] = useState(false);
 
-  // --- Fetch countries ---
   useEffect(() => {
     const fetchCountries = async () => {
       try {
@@ -65,21 +66,19 @@ const CustomerForm = ({ customer, onSubmit, onCancel }) => {
     fetchCountries();
   }, []);
 
-  // --- Handle Contact Country (Code) Change ---
   const handleCountryChange = (event, newValue) => {
     if (newValue) {
       setFormData(prev => ({
         ...prev,
         country: newValue,
         countryCode: newValue.callingCode,
-        addressCountry: newValue // ✅ Auto-fill address country
+        addressCountry: newValue
       }));
     } else {
       setFormData(prev => ({ ...prev, country: null, countryCode: '', addressCountry: null }));
     }
   };
 
-  // --- Handle Address Country Change ---
   const handleAddressCountryChange = (event, newValue) => {
     if (newValue) {
       setFormData(prev => ({
@@ -91,7 +90,6 @@ const CustomerForm = ({ customer, onSubmit, onCancel }) => {
     }
   };
 
-  // --- Autofill country when user types code manually ---
   useEffect(() => {
     if (!formData.countryCode || !countries.length) return;
     const normalizedCode = formData.countryCode.startsWith('+')
@@ -102,12 +100,11 @@ const CustomerForm = ({ customer, onSubmit, onCancel }) => {
       setFormData(prev => ({
         ...prev,
         country: match,
-        addressCountry: match // ✅ keep synced
+        addressCountry: match
       }));
     }
   }, [formData.countryCode, countries]);
 
-  // --- Fetch states when country changes ---
   useEffect(() => {
     if (!formData.addressCountry) return;
     const fetchStates = async () => {
@@ -134,7 +131,6 @@ const CustomerForm = ({ customer, onSubmit, onCancel }) => {
     fetchStates();
   }, [formData.addressCountry]);
 
-  // --- Fetch cities when state changes ---
   useEffect(() => {
     if (!formData.stateProvince || !formData.addressCountry) return;
     const stateObj = states.find(s => s.name === formData.stateProvince);
@@ -163,7 +159,6 @@ const CustomerForm = ({ customer, onSubmit, onCancel }) => {
     fetchCities();
   }, [formData.stateProvince, states, formData.addressCountry]);
 
-  // --- Autofill city/state from postal code ---
   useEffect(() => {
     if (!formData.postalCode || !formData.addressCountry) return;
     const fetchPostalInfo = async () => {
@@ -190,7 +185,6 @@ const CustomerForm = ({ customer, onSubmit, onCancel }) => {
     fetchPostalInfo();
   }, [formData.postalCode, formData.addressCountry]);
 
-  // --- Load customer data if editing ---
   useEffect(() => {
     if (customer && countries.length) {
       const contactCountry = countries.find(c => c.code === customer.countryCode) || null;
@@ -261,126 +255,417 @@ const CustomerForm = ({ customer, onSubmit, onCancel }) => {
   };
 
   return (
-    <Box component="form" onSubmit={handleSubmit}>
-      <Typography
-        variant="h5"
-        gutterBottom
-        sx={{ color: '#1976d2', fontWeight: 900, textAlign: 'center', letterSpacing: 1 }}
-      >
-        {customer ? 'Edit Customer' : 'Add New Customer'}
-      </Typography>
+    <Box 
+      component="form" 
+      onSubmit={handleSubmit}
+      sx={{
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        p: 4,
+        borderRadius: 3,
+        boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
+      }}
+    >
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 4 }}>
+        <PersonIcon sx={{ fontSize: 40, color: 'white', mr: 2 }} />
+        <Typography
+          variant="h4"
+          sx={{ 
+            color: 'white', 
+            fontWeight: 700,
+            letterSpacing: 1,
+            textTransform: 'uppercase'
+          }}
+        >
+          {customer ? 'Edit Customer' : 'Add New Customer'}
+        </Typography>
+      </Box>
 
-      {submitError && <Alert severity="error" sx={{ mb: 2 }}>{submitError}</Alert>}
+      {submitError && (
+        <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>
+          {submitError}
+        </Alert>
+      )}
 
-      <Grid container spacing={2}>
-        {/* Personal Info */}
-        <Grid item xs={12}>
-          <Typography variant="h6" sx={{ mb: 1, display: 'flex', alignItems: 'center' }}>
-            <PersonIcon sx={{ mr: 1, color: '#1976d2' }} />Personal Information
-          </Typography>
-        </Grid>
-        <Grid item xs={12} sm={6}>
-          <TextField name="firstName" label="First Name" value={formData.firstName}
-            onChange={handleInputChange} error={!!errors.firstName} helperText={errors.firstName}
-            fullWidth required />
-        </Grid>
-        <Grid item xs={12} sm={6}>
-          <TextField name="lastName" label="Last Name" value={formData.lastName}
-            onChange={handleInputChange} error={!!errors.lastName} helperText={errors.lastName}
-            fullWidth required />
-        </Grid>
-        <Grid item xs={12} sm={6}>
-          <TextField name="dateOfBirth" label="Date of Birth" type="date" value={formData.dateOfBirth}
-            onChange={handleInputChange} error={!!errors.dateOfBirth} helperText={errors.dateOfBirth}
-            fullWidth required InputLabelProps={{ shrink: true }} />
-        </Grid>
-        <Grid item xs={12} sm={6}>
-          <TextField name="gender" label="Gender" select value={formData.gender}
-            onChange={handleInputChange} error={!!errors.gender} helperText={errors.gender}
-            fullWidth required>
-            {genderOptions.map(option => <MenuItem key={option} value={option}>{option}</MenuItem>)}
-          </TextField>
-        </Grid>
+      <Paper sx={{ p: 4, borderRadius: 3, boxShadow: 3 }}>
+        <Grid container spacing={3}>
+          {/* Personal Information Section */}
+          <Grid item xs={12}>
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center',
+              pb: 2,
+              borderBottom: '3px solid #667eea'
+            }}>
+              <PersonIcon sx={{ mr: 1.5, color: '#667eea', fontSize: 28 }} />
+              <Typography variant="h6" sx={{ fontWeight: 700, color: '#667eea' }}>
+                Personal Information
+              </Typography>
+            </Box>
+          </Grid>
 
-        {/* Contact Info */}
-        <Grid item xs={12}>
-          <Typography variant="h6" sx={{ mb: 1, mt: 2, display: 'flex', alignItems: 'center' }}>
-            <EmailIcon sx={{ mr: 1, color: '#d81b60' }} />Contact Information
-          </Typography>
-        </Grid>
-        <Grid item xs={12}>
-          <TextField name="email" label="Email Address" type="email" value={formData.email}
-            onChange={handleInputChange} error={!!errors.email} helperText={errors.email}
-            fullWidth required />
-        </Grid>
-        <Grid item xs={12} sm={4}>
-          <Autocomplete
-            options={countries}
-            getOptionLabel={option => `${option.name} (${option.callingCode})`}
-            value={formData.country}
-            onChange={handleCountryChange}
-            isOptionEqualToValue={(option, value) => option?.code === value?.code}
-            renderInput={(params) => <TextField {...params} label="Country Code" required />}
-          />
-        </Grid>
-        <Grid item xs={12} sm={8}>
-          <TextField name="phoneNumber" label="Phone Number" value={formData.phoneNumber}
-            onChange={handleInputChange} error={!!errors.phoneNumber} helperText={errors.phoneNumber}
-            fullWidth required
-            InputProps={{
-              startAdornment: <InputAdornment position="start">{formData.countryCode}</InputAdornment>
-            }} />
-        </Grid>
+          <Grid item xs={12} sm={6}>
+            <TextField 
+              name="firstName" 
+              label="First Name" 
+              value={formData.firstName}
+              onChange={handleInputChange} 
+              error={!!errors.firstName} 
+              helperText={errors.firstName}
+              fullWidth 
+              required
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  '&:hover fieldset': { borderColor: '#667eea' },
+                  '&.Mui-focused fieldset': { borderColor: '#667eea' }
+                },
+                '& .MuiInputLabel-root.Mui-focused': { color: '#667eea' }
+              }}
+            />
+          </Grid>
 
-        {/* Address Info */}
-        <Grid item xs={12}>
-          <Typography variant="h6" sx={{ mb: 1, mt: 2, display: 'flex', alignItems: 'center' }}>
-            <LocationOnIcon sx={{ mr: 1, color: '#43a047' }} />Address Information
-          </Typography>
-        </Grid>
-        <Grid item xs={12}>
-          <TextField name="streetAddress" label="Street Address" value={formData.streetAddress}
-            onChange={handleInputChange} error={!!errors.streetAddress} helperText={errors.streetAddress}
-            fullWidth required multiline rows={2} />
-        </Grid>
-        <Grid item xs={12} sm={6}>
-          <Autocomplete
-            options={countries}
-            getOptionLabel={option => option.name}
-            value={formData.addressCountry}
-            onChange={handleAddressCountryChange}
-            isOptionEqualToValue={(option, value) => option?.code === value?.code}
-            renderInput={(params) => <TextField {...params} label="Country" required />}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6}>
-          <TextField name="stateProvince" label="State/Province" value={formData.stateProvince}
-            onChange={handleInputChange} error={!!errors.stateProvince} helperText={errors.stateProvince}
-            fullWidth required />
-        </Grid>
-        <Grid item xs={12} sm={6}>
-          <TextField name="city" label="City" value={formData.city}
-            onChange={handleInputChange} error={!!errors.city} helperText={errors.city}
-            fullWidth required />
-        </Grid>
-        <Grid item xs={12} sm={6}>
-          <TextField name="postalCode" label="Postal Code" value={formData.postalCode}
-            onChange={handleInputChange} error={!!errors.postalCode} helperText={errors.postalCode}
-            fullWidth InputProps={{ endAdornment: loadingPostal ? <CircularProgress size={20} /> : null }} />
-        </Grid>
+          <Grid item xs={12} sm={6}>
+            <TextField 
+              name="lastName" 
+              label="Last Name" 
+              value={formData.lastName}
+              onChange={handleInputChange} 
+              error={!!errors.lastName} 
+              helperText={errors.lastName}
+              fullWidth 
+              required
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  '&:hover fieldset': { borderColor: '#667eea' },
+                  '&.Mui-focused fieldset': { borderColor: '#667eea' }
+                },
+                '& .MuiInputLabel-root.Mui-focused': { color: '#667eea' }
+              }}
+            />
+          </Grid>
 
-        {/* Actions */}
-        <Grid item xs={12}>
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 3 }}>
-            <Button variant="outlined" onClick={onCancel}
-              sx={{ minWidth: 120, fontWeight: 700, letterSpacing: 1 }}>Cancel</Button>
-            <Button type="submit" variant="contained"
-              sx={{ minWidth: 120, fontWeight: 700, letterSpacing: 1 }}>
-              {customer ? 'Update Customer' : 'Add Customer'}
-            </Button>
-          </Box>
+          <Grid item xs={12} sm={6}>
+            <TextField 
+              name="dateOfBirth" 
+              label="Date of Birth" 
+              type="date" 
+              value={formData.dateOfBirth}
+              onChange={handleInputChange} 
+              error={!!errors.dateOfBirth} 
+              helperText={errors.dateOfBirth}
+              fullWidth 
+              required 
+              InputLabelProps={{ shrink: true }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <CakeIcon sx={{ color: '#667eea' }} />
+                  </InputAdornment>
+                )
+              }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  '&:hover fieldset': { borderColor: '#667eea' },
+                  '&.Mui-focused fieldset': { borderColor: '#667eea' }
+                },
+                '& .MuiInputLabel-root.Mui-focused': { color: '#667eea' }
+              }}
+            />
+          </Grid>
+
+          <Grid item xs={12} sm={6}>
+            <TextField 
+              name="gender" 
+              label="Gender" 
+              select 
+              value={formData.gender}
+              onChange={handleInputChange} 
+              error={!!errors.gender} 
+              helperText={errors.gender}
+              fullWidth 
+              required
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  '&:hover fieldset': { borderColor: '#667eea' },
+                  '&.Mui-focused fieldset': { borderColor: '#667eea' }
+                },
+                '& .MuiInputLabel-root.Mui-focused': { color: '#667eea' }
+              }}
+            >
+              {genderOptions.map(option => (
+                <MenuItem key={option} value={option}>{option}</MenuItem>
+              ))}
+            </TextField>
+          </Grid>
+
+          {/* Contact Information Section */}
+          <Grid item xs={12}>
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center',
+              pb: 2,
+              mt: 2,
+              borderBottom: '3px solid #f093fb'
+            }}>
+              <EmailIcon sx={{ mr: 1.5, color: '#f093fb', fontSize: 28 }} />
+              <Typography variant="h6" sx={{ fontWeight: 700, color: '#f093fb' }}>
+                Contact Information
+              </Typography>
+            </Box>
+          </Grid>
+
+          <Grid item xs={12}>
+            <TextField 
+              name="email" 
+              label="Email Address" 
+              type="email" 
+              value={formData.email}
+              onChange={handleInputChange} 
+              error={!!errors.email} 
+              helperText={errors.email}
+              fullWidth 
+              required
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <EmailIcon sx={{ color: '#f093fb' }} />
+                  </InputAdornment>
+                )
+              }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  '&:hover fieldset': { borderColor: '#f093fb' },
+                  '&.Mui-focused fieldset': { borderColor: '#f093fb' }
+                },
+                '& .MuiInputLabel-root.Mui-focused': { color: '#f093fb' }
+              }}
+            />
+          </Grid>
+
+          <Grid item xs={12} sm={4}>
+            <Autocomplete
+              options={countries}
+              getOptionLabel={option => `${option.name} (${option.callingCode})`}
+              value={formData.country}
+              onChange={handleCountryChange}
+              isOptionEqualToValue={(option, value) => option?.code === value?.code}
+              renderInput={(params) => (
+                <TextField 
+                  {...params} 
+                  label="Country Code" 
+                  required
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      '&:hover fieldset': { borderColor: '#f093fb' },
+                      '&.Mui-focused fieldset': { borderColor: '#f093fb' }
+                    },
+                    '& .MuiInputLabel-root.Mui-focused': { color: '#f093fb' }
+                  }}
+                />
+              )}
+            />
+          </Grid>
+
+          <Grid item xs={12} sm={8}>
+            <TextField 
+              name="phoneNumber" 
+              label="Phone Number" 
+              value={formData.phoneNumber}
+              onChange={handleInputChange} 
+              error={!!errors.phoneNumber} 
+              helperText={errors.phoneNumber}
+              fullWidth 
+              required
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <PhoneIcon sx={{ color: '#f093fb', mr: 0.5 }} />
+                    {formData.countryCode}
+                  </InputAdornment>
+                )
+              }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  '&:hover fieldset': { borderColor: '#f093fb' },
+                  '&.Mui-focused fieldset': { borderColor: '#f093fb' }
+                },
+                '& .MuiInputLabel-root.Mui-focused': { color: '#f093fb' }
+              }}
+            />
+          </Grid>
+
+          {/* Address Information Section */}
+          <Grid item xs={12}>
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center',
+              pb: 2,
+              mt: 2,
+              borderBottom: '3px solid #4facfe'
+            }}>
+              <LocationOnIcon sx={{ mr: 1.5, color: '#4facfe', fontSize: 28 }} />
+              <Typography variant="h6" sx={{ fontWeight: 700, color: '#4facfe' }}>
+                Address Information
+              </Typography>
+            </Box>
+          </Grid>
+
+          <Grid item xs={12}>
+            <TextField 
+              name="streetAddress" 
+              label="Street Address" 
+              value={formData.streetAddress}
+              onChange={handleInputChange} 
+              error={!!errors.streetAddress} 
+              helperText={errors.streetAddress}
+              fullWidth 
+              required 
+              multiline 
+              rows={2}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  '&:hover fieldset': { borderColor: '#4facfe' },
+                  '&.Mui-focused fieldset': { borderColor: '#4facfe' }
+                },
+                '& .MuiInputLabel-root.Mui-focused': { color: '#4facfe' }
+              }}
+            />
+          </Grid>
+
+          <Grid item xs={12} sm={6}>
+            <Autocomplete
+              options={countries}
+              getOptionLabel={option => option.name}
+              value={formData.addressCountry}
+              onChange={handleAddressCountryChange}
+              isOptionEqualToValue={(option, value) => option?.code === value?.code}
+              renderInput={(params) => (
+                <TextField 
+                  {...params} 
+                  label="Country" 
+                  required
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      '&:hover fieldset': { borderColor: '#4facfe' },
+                      '&.Mui-focused fieldset': { borderColor: '#4facfe' }
+                    },
+                    '& .MuiInputLabel-root.Mui-focused': { color: '#4facfe' }
+                  }}
+                />
+              )}
+            />
+          </Grid>
+
+          <Grid item xs={12} sm={6}>
+            <TextField 
+              name="stateProvince" 
+              label="State/Province" 
+              value={formData.stateProvince}
+              onChange={handleInputChange} 
+              error={!!errors.stateProvince} 
+              helperText={errors.stateProvince}
+              fullWidth 
+              required
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  '&:hover fieldset': { borderColor: '#4facfe' },
+                  '&.Mui-focused fieldset': { borderColor: '#4facfe' }
+                },
+                '& .MuiInputLabel-root.Mui-focused': { color: '#4facfe' }
+              }}
+            />
+          </Grid>
+
+          <Grid item xs={12} sm={6}>
+            <TextField 
+              name="city" 
+              label="City" 
+              value={formData.city}
+              onChange={handleInputChange} 
+              error={!!errors.city} 
+              helperText={errors.city}
+              fullWidth 
+              required
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  '&:hover fieldset': { borderColor: '#4facfe' },
+                  '&.Mui-focused fieldset': { borderColor: '#4facfe' }
+                },
+                '& .MuiInputLabel-root.Mui-focused': { color: '#4facfe' }
+              }}
+            />
+          </Grid>
+
+          <Grid item xs={12} sm={6}>
+            <TextField 
+              name="postalCode" 
+              label="Postal Code" 
+              value={formData.postalCode}
+              onChange={handleInputChange} 
+              error={!!errors.postalCode} 
+              helperText={errors.postalCode}
+              fullWidth
+              InputProps={{ 
+                endAdornment: loadingPostal ? (
+                  <InputAdornment position="end">
+                    <CircularProgress size={20} />
+                  </InputAdornment>
+                ) : null 
+              }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  '&:hover fieldset': { borderColor: '#4facfe' },
+                  '&.Mui-focused fieldset': { borderColor: '#4facfe' }
+                },
+                '& .MuiInputLabel-root.Mui-focused': { color: '#4facfe' }
+              }}
+            />
+          </Grid>
+
+          {/* Action Buttons */}
+          <Grid item xs={12}>
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 3 }}>
+              <Button 
+                variant="outlined" 
+                onClick={onCancel}
+                sx={{ 
+                  minWidth: 120, 
+                  fontWeight: 700, 
+                  letterSpacing: 1,
+                  borderWidth: 2,
+                  borderColor: '#667eea',
+                  color: '#667eea',
+                  '&:hover': {
+                    borderWidth: 2,
+                    borderColor: '#764ba2',
+                    backgroundColor: 'rgba(102, 126, 234, 0.1)'
+                  }
+                }}
+              >
+                Cancel
+              </Button>
+              <Button 
+                type="submit" 
+                variant="contained"
+                sx={{ 
+                  minWidth: 120, 
+                  fontWeight: 700, 
+                  letterSpacing: 1,
+                  background: 'linear-gradient(90deg, #667eea 0%, #764ba2 100%)',
+                  boxShadow: '0 4px 15px rgba(102, 126, 234, 0.4)',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    background: 'linear-gradient(90deg, #764ba2 0%, #667eea 100%)',
+                    boxShadow: '0 6px 20px rgba(102, 126, 234, 0.6)',
+                    transform: 'translateY(-2px)'
+                  }
+                }}
+              >
+                {customer ? 'Update Customer' : 'Add Customer'}
+              </Button>
+            </Box>
+          </Grid>
         </Grid>
-      </Grid>
+      </Paper>
     </Box>
   );
 };

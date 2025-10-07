@@ -1,7 +1,11 @@
 
-const express = require('express');
-const multer = require('multer');
-const path = require('path');
+import express from 'express';
+import multer from 'multer';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 // Configure multer for image uploads
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -14,7 +18,7 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-module.exports = (pool) => {
+const productsRoutes = (pool) => {
   const router = express.Router();
 
   // PUT archive product (set status to 'archived')
@@ -454,3 +458,5 @@ router.get('/:productId/materials', async (req, res) => {
 
   return router;
 };
+
+export default productsRoutes;

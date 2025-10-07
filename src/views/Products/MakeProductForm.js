@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
   TextField, MenuItem, Button, Grid, Typography, Paper, Box, Divider, Alert, Dialog, DialogTitle, DialogContent
 } from '@mui/material';
-
+import { API_BASE_URL } from 'src/config';
 
 const MakeProductForm = () => {
   const [products, setProducts] = useState([]);
@@ -19,40 +19,46 @@ const MakeProductForm = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-const [serviceProviders, setServiceProviders] = useState([]);
+  const [serviceProviders, setServiceProviders] = useState([]);
+  const [productCost, setProductCost] = useState(0);
 
 useEffect(() => {
-  fetch('http://localhost:5000/api/service-providers')
+  fetch(`${API_BASE_URL}/api/service-providers`, {
+    credentials: "include",
+  })
     .then(res => res.json())
     .then(data => setServiceProviders(data.data || []))
     .catch(() => setServiceProviders([]));
 }, []);
 
-  useEffect(() => {
-    fetch('http://localhost:5000/api/products/all')
+useEffect(() => {
+  fetch(`${API_BASE_URL}/api/products/all`, {
+    credentials: "include",
+  })
+    .then(res => res.json())
+    .then(data => setProducts(data.data || []))
+    .catch(() => setProducts([]))
+    .finally(() => setLoading(false));
+}, []);
+
+useEffect(() => {
+  if (formData.product_id && formData.method === "scratch") {
+    fetch(`${API_BASE_URL}/api/products/${formData.product_id}/materials`, {
+      credentials: "include",
+    })
       .then(res => res.json())
-      .then(data => setProducts(data.data || []))
-      .catch(() => setProducts([]))
-      .finally(() => setLoading(false));
-  }, []);
-
-  useEffect(() => {
-    if (formData.product_id && formData.method === 'scratch') {
-      fetch(`http://localhost:5000/api/products/${formData.product_id}/materials`)
-        .then(res => res.json())
-        .then(data => setProductMaterials(data.data || []))
-        .catch(() => setProductMaterials([]));
-    } else {
-      setProductMaterials([]);
-    }
-  }, [formData.product_id, formData.method]);
-
-  const [productCost, setProductCost] = useState(0);
-
+      .then(data => setProductMaterials(data.data || []))
+      .catch(() => setProductMaterials([]));
+  } else {
+    setProductMaterials([]);
+  }
+}, [formData.product_id, formData.method]);
 
 useEffect(() => {
   if (formData.product_id) {
-    fetch(`http://localhost:5000/api/products/${formData.product_id}`)
+    fetch(`${API_BASE_URL}/api/products/${formData.product_id}`, {
+      credentials: "include",
+    })
       .then(res => res.json())
       .then(data => {
         setProductCost(data.data?.cost_of_production || 0);
@@ -105,10 +111,12 @@ useEffect(() => {
     };
         
       console.log('Submitting production payload:', payload);
-      const response = await fetch('http://localhost:5000/api/production', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+      
+      const response = await fetch(`${API_BASE_URL}/api/production`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: 'include',
+        body: JSON.stringify(payload),
       });
       if (response.ok) {
         setSuccess('Product manufacturing record created successfully!');

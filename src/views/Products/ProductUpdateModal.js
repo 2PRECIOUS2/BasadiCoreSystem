@@ -18,6 +18,7 @@ import {
 } from '@mui/material';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline';
+import { API_BASE_URL } from 'src/config';
 
 const ProductUpdateModal = ({ open, onClose, product, onUpdate, productMaterials: productMaterialsProp }) => {
   const [productDetails, setProductDetails] = useState({
@@ -75,7 +76,9 @@ const ProductUpdateModal = ({ open, onClose, product, onUpdate, productMaterials
   // Fetch materials list
   useEffect(() => {
     if (open) {
-      fetch('http://localhost:5000/api/material/all')
+      fetch(`${API_BASE_URL}/api/material/all`, {
+        credentials: 'include',
+      })
         .then(res => res.json())
         .then(data => setMaterialsList(data))
         .catch(error => console.error('Error fetching materials:', error));
@@ -84,7 +87,9 @@ const ProductUpdateModal = ({ open, onClose, product, onUpdate, productMaterials
 
   const fetchProductMaterials = async (productId) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/products/${productId}/materials`);
+      const response = await fetch(`${API_BASE_URL}/api/products/${productId}/materials`, {
+        credentials: 'include',
+      });
       
       if (!response.ok) {
         console.warn(`Materials endpoint returned ${response.status}, using default material`);
@@ -206,9 +211,10 @@ const ProductUpdateModal = ({ open, onClose, product, onUpdate, productMaterials
       formData.append('image', image);
     }
     try {
-      const response = await fetch(`http://localhost:5000/api/products/${product.product_id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/products/${product.product_id}`, {
         method: 'PUT',
         body: formData,
+        credentials: 'include',
       });
       const data = await response.json();
       if (response.ok) {

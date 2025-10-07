@@ -4,8 +4,8 @@ import { useRoutes, useLocation, useNavigate } from 'react-router-dom';
 import Router from './routes/Router';
 //import Box from '@mui/material/Box';
 import BasadiCoreSplash from './components/shared/BasadiCoreSplash';
+import SessionWatcher from './components/SessionWatcher';
 import { createTheme } from '@mui/material/styles';
-import MSidebar from './layouts/full/sidebar/Sidebar';
 
 function App() {
   const [mode, setMode] = useState('light');
@@ -53,19 +53,14 @@ function App() {
     <ThemeProvider theme={theme}>
       <BasadiCoreSplash show={showSplash} />
       <CssBaseline />
-
-      {/* Show sidebar only when logged in */}
-      {isAuthenticated &&  !isAuthPage && (
-        <MSidebar
-          mode={mode}
-          setMode={setMode}
-          isSidebarOpen={isSidebarOpen}
-          onSidebarClose={() => setSidebarOpen(false)}
-        />
+      
+      {/* Session watcher - only active when authenticated and not on auth pages */}
+      {isAuthenticated && !showSplash && !isAuthPage && (
+        <SessionWatcher setIsAuthenticated={setIsAuthenticated} />
       )}
 
       {/* Render routes, pass setIsAuthenticated so login page can call it */}
-      {!showSplash && React.cloneElement(routing, { setIsAuthenticated })}
+      {!showSplash && React.cloneElement(routing, { setIsAuthenticated, mode, setMode })}
     </ThemeProvider>
   );
 }

@@ -17,6 +17,7 @@ import CardGiftcardIcon from '@mui/icons-material/CardGiftcard';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import { useNavigate } from 'react-router-dom';
 import { set } from 'lodash';
+import { API_BASE_URL } from 'src/config';
 
 const categories = ['All Products', 'Fashion Accessories', 'African print-inspired custom clothing', 'Corporate Gifts'];
 const sortOptions = [
@@ -81,7 +82,9 @@ const [projectCustomerLastName, setProjectCustomerLastName] = useState("");
 
   useEffect(() => {
     setLoading(true);
-    fetch('http://localhost:5000/api/customers')
+    fetch(`${API_BASE_URL}/api/customers`, {
+      credentials: 'include',
+    })
       .then(res => res.json())
       .then(data => {
         console.log('API data:', data);
@@ -96,7 +99,9 @@ const [projectCustomerLastName, setProjectCustomerLastName] = useState("");
       .catch(() => setCustomers([]))
       .finally(() => setLoading(false));
     
-    fetch('http://localhost:5000/api/products')
+    fetch(`${API_BASE_URL}/api/products`, {
+      credentials: 'include',
+    })
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) {
@@ -113,7 +118,9 @@ const [projectCustomerLastName, setProjectCustomerLastName] = useState("");
         setLoading(false);
         setError('Failed to fetch products');
       });
-         fetch('http://localhost:5000/api/projects')
+         fetch(`${API_BASE_URL}/api/projects`, {
+           credentials: 'include',
+         })
       .then(res => res.json())
       .then(data => {
         console.log('Projects data:', data);
@@ -944,9 +951,10 @@ const [projectCustomerLastName, setProjectCustomerLastName] = useState("");
                               };
 
                               try {
-                                const res = await fetch('http://localhost:5000/api/orders', {
+                                const res = await fetch(`${API_BASE_URL}/api/orders`, {
                                   method: 'POST',
                                   headers: { 'Content-Type': 'application/json' },
+                                  credentials: 'include',
                                   body: JSON.stringify(payload)
                                 });
                                 const data = await res.json();

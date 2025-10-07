@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { TextField, Button, Grid, MenuItem, Typography, IconButton, Stack, Snackbar, Alert } from '@mui/material';
 import { Add, Remove } from '@mui/icons-material';
+import { API_BASE_URL } from '../../config';
 
 const NewStock = () => {
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
@@ -12,7 +13,9 @@ const NewStock = () => {
   const [totalCost, setTotalCost] = useState(0);
 
   useEffect(() => {
-    fetch('http://localhost:5000/api/material/all')
+    fetch(`${API_BASE_URL}/api/material/all`, {
+      credentials: 'include'
+    })
       .then(res => res.json())
       .then(data => setMaterials(data));
   }, []);
@@ -57,9 +60,10 @@ const NewStock = () => {
     };
 
     try {
-      const res = await fetch('http://localhost:5000/api/stock/add', {
+      const res = await fetch(`${API_BASE_URL}/api/stock/add`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(payload),
       });
 

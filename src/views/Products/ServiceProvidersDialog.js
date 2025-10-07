@@ -20,6 +20,7 @@ import {
 import CloseIcon from '@mui/icons-material/Close';
 import PeopleAltIcon from '@mui/icons-material/PeopleAlt';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
+import { API_BASE_URL } from '../../config';
 
 const ServiceProvidersDialog = ({ open, onClose }) => {
   const [providers, setProviders] = useState([]);
@@ -27,6 +28,29 @@ const ServiceProvidersDialog = ({ open, onClose }) => {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState('');
   const [anchorEl, setAnchorEl] = useState(null);
+
+  // Fetch providers
+  useEffect(() => {
+    if (!open) return;
+    setLoading(true);
+    fetch(`${API_BASE_URL}/api/service-providers`, {
+      credentials: 'include',
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && Array.isArray(data.data)) {
+          setProviders(data.data);
+        } else {
+          setProviders([]);
+        }
+        setLoading(false);
+      })
+      .catch(() => {
+        setProviders([]);
+        setLoading(false);
+        setError('Failed to fetch service providers');
+      });
+  }, [open]);
   const [selectedProvider, setSelectedProvider] = useState(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
 
@@ -34,7 +58,9 @@ const ServiceProvidersDialog = ({ open, onClose }) => {
   useEffect(() => {
     if (!open) return;
     setLoading(true);
-    fetch('http://localhost:5000/api/service-providers')
+    fetch(`${API_BASE_URL}/api/service-providers`, {
+      credentials: 'include',
+    })
       .then(res => res.json())
       .then(data => {
         if (data.success && Array.isArray(data.data)) {
@@ -65,9 +91,10 @@ const ServiceProvidersDialog = ({ open, onClose }) => {
   const handleArchive = async () => {
     if (!selectedProvider) return;
     try {
-      const res = await fetch(`http://localhost:5000/api/service-providers/${selectedProvider.provider_id}/archive`, {
+      const res = await fetch(`${API_BASE_URL}/api/service-providers/${selectedProvider.provider_id}/archive`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
       });
       if (res.ok) {
         setSuccess('Service provider archived');
@@ -189,9 +216,10 @@ const ServiceProvidersDialog = ({ open, onClose }) => {
                 const contact_number = formData.get('contact_number');
                 const email = formData.get('email');
                 try {
-                  const res = await fetch('http://localhost:5000/api/service-providers', {
+                  const res = await fetch(`${API_BASE_URL}/api/service-providers`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
                     body: JSON.stringify({ name, location, contact_number, email })
                   });
                   if (res.ok) {

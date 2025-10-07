@@ -1,8 +1,7 @@
-const express = require('express');
-const { route } = require('./approvalRoutes');
+import express from 'express';
 const router = express.Router();
 
-module.exports = (pool) => {
+const productionRouter = (pool) => {
 
   // POST new production record
   router.post('/', async (req, res) => {
@@ -126,5 +125,7 @@ module.exports = (pool) => {
       if (client) client.release();
     }
   });
-  return route;
+  return router;
 };
+
+export default productionRouter;

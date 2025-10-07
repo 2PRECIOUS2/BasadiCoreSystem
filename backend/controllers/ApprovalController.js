@@ -1,12 +1,12 @@
-const pool = require('../db');
-const sendApprovalEmail = require('../utils/sendApprovalEmail');
+import dbModule from '../db/index.js';
+import sendApprovalEmail from '../utils/sendApprovalEmail.js';
 
-exports.approveUser = async (req, res) => {
+const approveUser = async (req, res) => {
   const { id, token } = req.query;
   let client;
 
   try {
-    client = await pool.connect();
+    client = await dbModule.pool.connect();
 
     const userResult = await client.query('SELECT * FROM users WHERE id = $1', [id]);
     const user = userResult.rows[0];
@@ -30,3 +30,5 @@ exports.approveUser = async (req, res) => {
     if (client) client.release();
   }
 };
+
+export default { approveUser };

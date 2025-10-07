@@ -1,7 +1,8 @@
-const express = require('express');
+import express from 'express';
+import approvalController from '../controllers/ApprovalController.js';
+
 const router = express.Router();
-const approvalController = require('../controllers/ApprovalController');
 
 router.get('/approve-user', approvalController.approveUser);
 
-module.exports = router;
+export default router;

@@ -20,8 +20,10 @@
     "@mui/lab": "5.0.0-alpha.133",
     "@mui/material": "^5.18.0",
     "@mui/system": "^5.14.11",
+    "@mui/x-data-grid": "^8.12.1",
     "@mui/x-date-pickers": "^8.9.2",
     "@react-pdf/renderer": "^4.3.0",
+    "@sendgrid/mail": "^8.1.6",
     "@svgr/rollup": "^8.1.0",
     "@tabler/icons-react": "^2.35.0",
     "axios": "^1.11.0",
@@ -53,6 +55,7 @@
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.3",
     "gh-pages": "^6.3.0",
+    "nodemon": "^3.1.10",
     "vite": "^4.4.5"
   }
 }

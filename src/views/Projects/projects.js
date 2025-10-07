@@ -8,8 +8,17 @@ import {
   Select,
   InputLabel,
   FormControl,
+  Paper,
+  Avatar,
+  Divider,
+  Chip
 } from "@mui/material";
-import AddIcon from '@mui/icons-material/Add';
+import {
+  Add as AddIcon,
+  Work as WorkIcon,
+  FilterList as FilterIcon,
+  Search as SearchIcon
+} from '@mui/icons-material';
 import ProjectsList from "./ProjectsList";
 import CreateProject from "./CreateProject";
 import UpdateProject from "./UpdateProject";
@@ -17,6 +26,10 @@ import ViewProject from "./ViewProject";
 import Snackbar from '@mui/material/Snackbar';
 import Alert from '@mui/material/Alert';
 import Dialog from "@mui/material/Dialog";
+import { API_BASE_URL } from 'src/config';
+import withRoleProtection from '../../components/shared/withRoleProtection';
+import PermissionGate from '../../components/shared/PermissionGate';
+import { hasPermission, getUserDisplayInfo } from '../../utils/rbac';
 
 const sortOptions = [
   { label: "Project Status", value: "status" },
@@ -66,20 +79,24 @@ export function Projects() {
   const [selectedProjectId, setSelectedProjectId] = useState(null);
 
   // Fetch projects from backend
-  const fetchProjects = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch("/api/projects");
-      if (!res.ok) throw new Error("Failed to fetch projects");
-      const data = await res.json();
-      setProjects(data);
-    } catch (err) {
-      setError(err.message || "Error fetching projects");
-    } finally {
-      setLoading(false);
-    }
-  };
+
+const fetchProjects = async () => {
+  setLoading(true);
+  setError(null);
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/projects`, {
+      credentials: 'include' // if you use sessions
+    });
+    if (!res.ok) throw new Error("Failed to fetch projects");
+    const data = await res.json();
+    setProjects(data);
+  } catch (err) {
+    setError(err.message || "Error fetching projects");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   useEffect(() => {
     fetchProjects();
@@ -127,10 +144,272 @@ const handleSaveEdit = () => {
 const handleCloseView = () => setOpenView(false);
 
   return (
-    <Box sx={{ p: 4 }}>
+    <Box sx={{ 
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      p: 0
+    }}>
+      {/* Enhanced Header Section */}
+      <Box sx={{ 
+        bgcolor: 'rgba(255,255,255,0.95)', 
+        backdropFilter: 'blur(10px)',
+        borderBottom: '3px solid #667eea',
+        p: 4,
+        mb: 0,
+        boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
+      }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3, mb: 2 }}>
+          <Avatar sx={{ 
+            bgcolor: '#667eea', 
+            width: 64, 
+            height: 64,
+            boxShadow: '0 6px 16px rgba(102, 126, 234, 0.3)'
+          }}>
+            <WorkIcon sx={{ fontSize: 36, color: 'white' }} />
+          </Avatar>
+          <Box sx={{ textAlign: 'center' }}>
+            <Typography variant="h3" sx={{ 
+              fontWeight: 'bold',
+              background: 'linear-gradient(45deg, #667eea, #764ba2)',
+              backgroundClip: 'text',
+              color: 'transparent',
+              mb: 1
+            }}>
+              Project Management
+            </Typography>
+            <Typography variant="h6" sx={{ 
+              color: '#64748b',
+              fontWeight: '500'
+            }}>
+              Plan, organize, and track your project workflows
+            </Typography>
+            {/* Role-based access info */}
+            <Typography variant="body2" sx={{ 
+              color: '#94a3b8',
+              fontWeight: '400',
+              mt: 1
+            }}>
+              Access Level: {getUserDisplayInfo()?.role || 'Unknown'} • Projects Module
+            </Typography>
+          </Box>
+        </Box>
+
+        {/* Enhanced Search and Filter Section */}
+        <Paper sx={{ 
+          p: 3, 
+          mt: 3,
+          borderRadius: 3,
+          background: 'rgba(255,255,255,0.9)',
+          backdropFilter: 'blur(10px)',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
+          border: '1px solid rgba(255,255,255,0.2)'
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+            <FilterIcon sx={{ color: '#667eea', fontSize: 28 }} />
+            <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#2d3748' }}>
+              Search & Filter Projects
+            </Typography>
+          </Box>
+          <Divider sx={{ mb: 3, borderColor: '#667eea', borderWidth: 1 }} />
+          
+          <Box sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 2,
+            flexWrap: { xs: 'wrap', sm: 'nowrap' },
+          }}>
+            <TextField
+              label="Search projects..."
+              variant="outlined"
+              size="medium"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              InputProps={{
+                startAdornment: <SearchIcon sx={{ color: '#667eea', mr: 1 }} />
+              }}
+              sx={{ 
+                flex: 2, 
+                minWidth: 280,
+                '& .MuiOutlinedInput-root': {
+                  '&:hover fieldset': { borderColor: '#667eea', borderWidth: 2 },
+                  '&.Mui-focused fieldset': { borderColor: '#667eea', borderWidth: 2 }
+                },
+                '& .MuiInputLabel-root.Mui-focused': { color: '#667eea' }
+              }}
+            />
+            
+            <FormControl size="medium" sx={{ minWidth: 180 }}>
+              <InputLabel>Sort by</InputLabel>
+              <Select
+                value={sortBy}
+                label="Sort by"
+                onChange={(e) => setSortBy(e.target.value)}
+                sx={{
+                  '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#48bb78', borderWidth: 2 },
+                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#48bb78', borderWidth: 2 }
+                }}
+              >
+                {sortOptions.map((opt) => (
+                  <MenuItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            
+            <FormControl size="medium" sx={{ minWidth: 180 }}>
+              <InputLabel>Category</InputLabel>
+              <Select
+                value={category}
+                label="Category"
+                onChange={(e) => setCategory(e.target.value)}
+                sx={{
+                  '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#ed8936', borderWidth: 2 },
+                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#ed8936', borderWidth: 2 }
+                }}
+              >
+                {categories.map((cat) => (
+                  <MenuItem key={cat.value} value={cat.value}>
+                    {cat.label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              size="large"
+              onClick={handleOpenCreate}
+              sx={{
+                py: 1.8,
+                px: 4,
+                fontWeight: 'bold',
+                fontSize: 16,
+                borderRadius: 2,
+                minWidth: 200,
+                background: 'linear-gradient(45deg, #667eea, #764ba2)',
+                color: 'white',
+                textTransform: 'none',
+                whiteSpace: 'nowrap',
+                boxShadow: '0 4px 16px rgba(102, 126, 234, 0.3)',
+                '&:hover': {
+                  background: 'linear-gradient(45deg, #5a67d8, #6b46c1)',
+                  transform: 'translateY(-2px)',
+                  boxShadow: '0 8px 25px rgba(102, 126, 234, 0.4)'
+                }
+              }}
+            >
+              Create Project
+            </Button>
+          </Box>
+
+          {/* Project Count Summary */}
+          <Box sx={{ mt: 3, display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+            <Chip 
+              label={`Total Projects: ${projects.length}`}
+              sx={{ 
+                bgcolor: '#667eea', 
+                color: 'white',
+                fontWeight: 'bold',
+                fontSize: '0.9rem'
+              }}
+            />
+            <Chip 
+              label={`Filtered: ${sortedProjects.length}`}
+              sx={{ 
+                bgcolor: '#48bb78', 
+                color: 'white',
+                fontWeight: 'bold',
+                fontSize: '0.9rem'
+              }}
+            />
+            {category !== 'all' && (
+              <Chip 
+                label={`Category: ${categories.find(c => c.value === category)?.label}`}
+                sx={{ 
+                  bgcolor: '#ed8936', 
+                  color: 'white',
+                  fontWeight: 'bold',
+                  fontSize: '0.9rem'
+                }}
+              />
+            )}
+          </Box>
+        </Paper>
+      </Box>
+
+      {/* Main Content Area */}
+      <Box sx={{ 
+        p: 4,
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        minHeight: 'calc(100vh - 280px)'
+      }}>
+        <Paper sx={{ 
+          p: 4,
+          borderRadius: 3,
+          background: 'rgba(255,255,255,0.95)',
+          backdropFilter: 'blur(10px)',
+          boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
+          border: '1px solid rgba(255,255,255,0.2)',
+          minHeight: '400px'
+        }}>
+          {loading ? (
+            <Box sx={{ 
+              display: 'flex', 
+              justifyContent: 'center', 
+              alignItems: 'center', 
+              minHeight: '300px',
+              flexDirection: 'column',
+              gap: 2
+            }}>
+              <Avatar sx={{ 
+                bgcolor: '#667eea', 
+                width: 80, 
+                height: 80,
+                animation: 'pulse 2s infinite'
+              }}>
+                <WorkIcon sx={{ fontSize: 40 }} />
+              </Avatar>
+              <Typography variant="h6" sx={{ color: '#64748b' }}>
+                Loading projects...
+              </Typography>
+            </Box>
+          ) : error ? (
+            <Box sx={{ 
+              display: 'flex', 
+              justifyContent: 'center', 
+              alignItems: 'center', 
+              minHeight: '300px',
+              flexDirection: 'column',
+              gap: 2
+            }}>
+              <Typography variant="h6" color="error" sx={{ textAlign: 'center' }}>
+                {error}
+              </Typography>
+              <Button 
+                variant="contained" 
+                onClick={fetchProjects}
+                sx={{
+                  background: 'linear-gradient(45deg, #667eea, #764ba2)',
+                  '&:hover': {
+                    background: 'linear-gradient(45deg, #5a67d8, #6b46c1)'
+                  }
+                }}
+              >
+                Retry
+              </Button>
+            </Box>
+          ) : (
+            <ProjectsList projects={sortedProjects} onEdit={handleEditProject} onView={handleViewProject} />
+          )}
+        </Paper>
+      </Box>
+      
+      {/* Snackbar Notifications */}
       <Snackbar
         open={snackbar.open}
-        autoHideDuration={2500}
+        autoHideDuration={4000}
         onClose={() => setSnackbar({ ...snackbar, open: false })}
         anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
       >
@@ -142,89 +421,8 @@ const handleCloseView = () => setOpenView(false);
           {snackbar.message}
         </Alert>
       </Snackbar>
-      <Box sx={{ display: 'flex', justifyContent: 'center', mb: 8, mt: 0 }}>
-        <Typography variant="h4" align="center">Projects</Typography>
-      </Box>
-      <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          mb: 5,
-          gap: 1,
-          flexWrap: { xs: 'wrap', sm: 'nowrap' },
-        }}
-      >
-        <TextField
-          label="Search by filters"
-          variant="outlined"
-          size="small"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          sx={{ flex: 3, minWidth: 220, maxWidth: 400 }}
-        />
-        <FormControl size="small" sx={{ minWidth: 150, ml: 1 }}>
-          <InputLabel>Sort by</InputLabel>
-          <Select
-            value={sortBy}
-            label="Sort by"
-            onChange={(e) => setSortBy(e.target.value)}
-          >
-            {sortOptions.map((opt) => (
-              <MenuItem key={opt.value} value={opt.value}>
-                {opt.label}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-        <FormControl size="small" sx={{ minWidth: 150, ml: 1 }}>
-          <InputLabel>Category</InputLabel>
-          <Select
-            value={category}
-            label="Category"
-            onChange={(e) => setCategory(e.target.value)}
-          >
-            {categories.map((cat) => (
-              <MenuItem key={cat.value} value={cat.value}>
-                {cat.label}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          sx={{
-            py: 1.2,
-            px: 6,
-            ml: 1,
-            fontWeight: 600,
-            letterSpacing: 1,
-            fontSize: 17,
-            borderRadius: 2,
-            minWidth: 260,
-            background: 'linear-gradient(90deg, #1976d2 60%, #64b5f6 100%)',
-            boxShadow: '0 2px 8px #90caf9',
-            transition: 'transform 0.18s, box-shadow 0.18s',
-            textTransform: 'none',
-            whiteSpace: 'nowrap',
-            '&:hover': {
-              transform: 'scale(1.05)',
-              boxShadow: '0 4px 16px #90caf9',
-              background: 'linear-gradient(90deg, #1565c0 60%, #42a5f5 100%)'
-            }
-          }}
-          onClick={handleOpenCreate}
-        >
-          Create Project
-        </Button>
-      </Box>
-      {loading ? (
-        <Typography>Loading projects...</Typography>
-      ) : error ? (
-        <Typography color="error">{error}</Typography>
-      ) : (
-        <ProjectsList projects={sortedProjects} onEdit={handleEditProject} onView={handleViewProject} />
-      )}
+
+      {/* Dialog Components */}
       <CreateProject
         open={openCreate}
         onClose={handleCloseCreate}
@@ -255,4 +453,4 @@ const handleCloseView = () => setOpenView(false);
   );
 }
 
-export default Projects;
+export default withRoleProtection(Projects, 'projects');

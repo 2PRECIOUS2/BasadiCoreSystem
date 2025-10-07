@@ -8,13 +8,7 @@ import PageContainer from 'src/components/container/PageContainer';
 import Logo from 'src/layouts/full/shared/logo/Logo';
 import AuthLogin from './auth/AuthLogin';
 
-const Login2 = (props) => {
-  const navigate = useNavigate();
-
-  const handleLogin = () => {
-    // After successful login
-    navigate('/dashboard');
-  };
+const Login2 = ({ setIsAuthenticated, setUser }) => {  // Add props here
   return (
     <PageContainer title="Login" description="this is Login page">
       <Box
@@ -48,7 +42,8 @@ const Login2 = (props) => {
                 <Logo />
               </Box>
             <AuthLogin
-              setIsAuthenticated={props.setIsAuthenticated}
+              setIsAuthenticated={setIsAuthenticated}  // Pass props down
+              setUser={setUser}  // Pass props down
               subtext={
                 <Typography variant="subtitle1" textAlign="center" color="textSecondary" mb={1}>
                   Empower Women. Buy Local.
@@ -56,13 +51,13 @@ const Login2 = (props) => {
               }
               subtitle={
                 <Stack direction="row" spacing={1} justifyContent="center" mt={3}>
-                  <Typography color="textSecondary" variant="body3" fontWeight="500">
+                  <Typography color="textSecondary" variant="body1" fontWeight="500">
                     New to BasadiCore?
                   </Typography>
                   <Typography
                     component={Link}
                     to="/auth/register"
-                    variant="body3"
+                    variant="body1"
                     fontWeight="500"
                     sx={{
                       textDecoration: 'none',

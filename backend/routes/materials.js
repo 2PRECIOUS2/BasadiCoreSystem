@@ -1,10 +1,13 @@
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const multer = require('multer');
-const path = require('path');
+import multer from 'multer';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import fs from 'fs';
+import sharp from 'sharp';
 
-const fs = require('fs');
-const sharp = require('sharp');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -19,7 +22,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-module.exports = (pool) => {
+const materialRoutes = (pool) => {
 
   // Add new batch for a material
   router.post('/add-material-stock', async (req, res) => {
@@ -288,3 +291,5 @@ module.exports = (pool) => {
 
   return router;
 };
+
+export default materialRoutes;

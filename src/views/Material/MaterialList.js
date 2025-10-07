@@ -28,6 +28,7 @@ import RestoreIcon from '@mui/icons-material/Restore';
 import ArchiveIcon from '@mui/icons-material/Archive';
 import AddIcon from '@mui/icons-material/Add';
 import MaterialForm from './MaterialForm';
+import { API_BASE_URL } from '../../config';
 
 const MaterialList = () => {
   // State declarations must come first
@@ -82,7 +83,7 @@ const MaterialList = () => {
   const maxQuantity = 100;
 
   const fetchMaterials = (filter = searchFilter, value = searchValue, status = statusFilter) => {
-    let url = 'http://localhost:5000/api/material/all';
+        let url = `${API_BASE_URL}/api/material/all`;
     const params = [];
     
     // Add status filter
@@ -98,15 +99,20 @@ const MaterialList = () => {
     
     if (params.length) url += '?' + params.join('&');
     
-    fetch(url)
+    fetch(url, {
+      credentials: 'include'
+    })
       .then(res => res.json())
       .then(data => {
-        const sortedData = data.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        // Handle both direct array and wrapped response
+        const materials = Array.isArray(data) ? data : (data.data || []);
+        const sortedData = materials.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
         setMaterials(sortedData);
       })
       .catch(error => {
         console.error('Error fetching materials:', error);
         setError('Failed to fetch materials');
+        setMaterials([]); // Set empty array on error
       });
   };
 
@@ -175,8 +181,9 @@ const MaterialList = () => {
     }
 
     try {
-      const response = await fetch(`http://localhost:5000/api/material/${updateData.material_id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/material/${updateData.material_id}`, {
         method: 'PUT',
+        credentials: 'include',
         body: formData,
       });
 
@@ -227,7 +234,7 @@ const MaterialList = () => {
   console.log('🚀 Starting archive process...');
 
   try {
-    const url = `http://localhost:5000/api/material/${selectedMaterial.material_id}/archive`;
+    const url = `${API_BASE_URL}/api/material/${selectedMaterial.material_id}/archive`;
     console.log('🌐 Making request to:', url);
     
     const response = await fetch(url, {
@@ -235,6 +242,7 @@ const MaterialList = () => {
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include',
     });
 
     console.log('📡 Response status:', response.status);
@@ -274,11 +282,12 @@ console.log('🎭 Dialog states:', { openArchive, openRestore, selectedMaterial:
   const confirmRestore = async () => {
     if (selectedMaterial) {
       try {
-        const response = await fetch(`http://localhost:5000/api/material/${selectedMaterial.material_id}/restore`, {
+        const response = await fetch(`${API_BASE_URL}/api/material/${selectedMaterial.material_id}/restore`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
           },
+          credentials: 'include',
         });
 
         if (response.ok) {

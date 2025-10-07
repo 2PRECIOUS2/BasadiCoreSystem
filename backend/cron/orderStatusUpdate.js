@@ -1,6 +1,6 @@
-const cron = require('node-cron');
+import cron from 'node-cron';
 
-module.exports = (pool) => {
+const orderStatusUpdate = (pool) => {
   // Schedule to run every day at 1am
   cron.schedule('0 1 * * *', async () => {
     try {
@@ -15,3 +15,5 @@ module.exports = (pool) => {
     }
   });
 };
+
+export default orderStatusUpdate;

@@ -4,6 +4,7 @@ import { Dialog, Box, CircularProgress, Typography } from '@mui/material';
 import { PDFDownloadLink } from '@react-pdf/renderer';
 import InvoicePDF from './InvoicePDF';
 import axios from 'axios';
+import { API_BASE_URL } from '../../config';
 
 const ViewOrderInvoice = ({ open, onClose, orderno }) => {
   const [invoiceData, setInvoiceData] = useState(null);
@@ -15,29 +16,38 @@ const ViewOrderInvoice = ({ open, onClose, orderno }) => {
     const fetchInvoice = async () => {
       setLoading(true);
       try {
-        const res = await axios.get(`http://localhost:5000/api/order-invoice/${orderno}`);
+        const res = await axios.get(`${API_BASE_URL}/api/order-invoice/${orderno}`, {
+          withCredentials: true, // send session cookies
+        });
         const data = res.data;
 
-        // Ensure numeric values
-        const items = data.items.map(item => ({
-          ...item,
-          unitprice: Number(item.unitprice),
-          quantity: Number(item.quantity)
-        }));
+        // Ensure numeric values for items
+        const items = Array.isArray(data.items)
+          ? data.items.map(item => ({
+              ...item,
+              unitprice: Number(item.unitprice),
+              quantity: Number(item.quantity),
+            }))
+          : [];
 
         // Safe parse delivery address
         let deliveryAddress = {};
         try {
-          deliveryAddress = typeof data.order.deliveryaddress === 'string'
-            ? JSON.parse(data.order.deliveryaddress)
-            : data.order.deliveryaddress || {};
+          deliveryAddress =
+            typeof data.order.deliveryaddress === "string"
+              ? JSON.parse(data.order.deliveryaddress)
+              : data.order.deliveryaddress || {};
         } catch {
           deliveryAddress = {};
         }
 
-        setInvoiceData({ ...data, items, order: { ...data.order, deliveryaddress: deliveryAddress } });
+        setInvoiceData({
+          ...data,
+          items,
+          order: { ...data.order, deliveryaddress: deliveryAddress },
+        });
       } catch (err) {
-        console.error('Failed to fetch invoice:', err);
+        console.error("Failed to fetch invoice:", err.response?.data || err.message);
       } finally {
         setLoading(false);
       }

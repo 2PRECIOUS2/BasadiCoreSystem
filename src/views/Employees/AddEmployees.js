@@ -6,18 +6,30 @@ import {
   IconButton,
   Typography,
   Button,
-  Box,
   TextField,
-  MenuItem,
-  Select,
-  InputLabel,
-  FormControl,
+  Box,
   Grid,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
   Slide,
   Snackbar,
   Alert,
+  Paper,
+  Avatar,
+  Divider
 } from "@mui/material";
-import CloseIcon from "@mui/icons-material/Close";
+import {
+  Close as CloseIcon,
+  PersonAdd as PersonAddIcon,
+  Person as PersonIcon,
+  ContactPhone as ContactIcon,
+  Home as HomeIcon,
+  Work as WorkIcon
+} from "@mui/icons-material";
+import axios from "axios";
+import { API_BASE_URL } from 'src/config';
 import zaCities from "./za.json";
 
 // Employment types and roles for dropdowns
@@ -158,11 +170,12 @@ function AddEmployees({ open, onClose, onSave }) {
     };
 
     try {
-      const response = await fetch("/api/employees", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(employee),
-      });
+      const response = await fetch(`${API_BASE_URL}/api/employees`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(employee),
+    });
        if (response.ok) {
     const data = await response.json();
     setSnackbar({ open: true, message: "Employee successfully created!", severity: "success" });
@@ -186,19 +199,84 @@ function AddEmployees({ open, onClose, onSave }) {
   return (
     <>
       <Dialog fullScreen open={open} onClose={handleClose} TransitionComponent={Transition}>
-        <AppBar sx={{ position: "relative" }}>
-          <Toolbar>
-            <IconButton edge="start" color="inherit" onClick={handleClose}>
+        {/* Enhanced Header with Gradient */}
+        <AppBar sx={{ 
+          position: "relative",
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          boxShadow: '0 4px 20px rgba(102, 126, 234, 0.3)'
+        }}>
+          <Toolbar sx={{ py: 1 }}>
+            <Avatar sx={{ 
+              bgcolor: 'rgba(255,255,255,0.2)', 
+              mr: 2,
+              width: 48,
+              height: 48
+            }}>
+              <PersonAddIcon sx={{ color: 'white', fontSize: 28 }} />
+            </Avatar>
+            <Box sx={{ flex: 1 }}>
+              <Typography variant="h5" sx={{ 
+                fontWeight: 'bold',
+                color: 'white',
+                textShadow: '0 2px 4px rgba(0,0,0,0.3)'
+              }}>
+                Add New Employee
+              </Typography>
+              <Typography variant="subtitle1" sx={{ 
+                color: 'rgba(255,255,255,0.9)',
+                fontWeight: '400'
+              }}>
+                Create a new employee profile for your team
+              </Typography>
+            </Box>
+            <IconButton 
+              edge="end" 
+              color="inherit" 
+              onClick={handleClose}
+              sx={{
+                bgcolor: 'rgba(255,255,255,0.1)',
+                '&:hover': {
+                  bgcolor: 'rgba(255,255,255,0.2)'
+                }
+              }}
+            >
               <CloseIcon />
             </IconButton>
-            <Typography sx={{ ml: 2, flex: 1 }} variant="h6" component="div">
-              Add Employee
-            </Typography>
           </Toolbar>
         </AppBar>
-        <Box sx={{ p: 4, maxWidth: 900, mx: "auto" }}>
-          {/* Personal Information */}
-          <Typography variant="h6" sx={{ mb: 2 }}>Personal Information</Typography>
+        
+        {/* Enhanced Content with Gradient Background */}
+        <Box sx={{ 
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          minHeight: 'calc(100vh - 80px)',
+          p: 4
+        }}>
+          <Paper sx={{ 
+            p: 4, 
+            maxWidth: 1000, 
+            mx: "auto",
+            borderRadius: 3,
+            background: 'rgba(255,255,255,0.95)',
+            backdropFilter: 'blur(10px)',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
+            border: '1px solid rgba(255,255,255,0.2)'
+          }}>
+          {/* Personal Information Section */}
+          <Box sx={{ mb: 4 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+              <Avatar sx={{ bgcolor: '#667eea', width: 40, height: 40 }}>
+                <PersonIcon sx={{ color: 'white', fontSize: 24 }} />
+              </Avatar>
+              <Box>
+                <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#2d3748' }}>
+                  Personal Information
+                </Typography>
+                <Typography variant="body2" sx={{ color: '#64748b' }}>
+                  Basic employee details and identity
+                </Typography>
+              </Box>
+            </Box>
+            <Divider sx={{ mb: 3, bgcolor: '#667eea', height: 2 }} />
           <Grid container spacing={3}>
           <Grid item xs={12} sm={6}>
             <TextField
@@ -255,9 +333,24 @@ function AddEmployees({ open, onClose, onSave }) {
             />
           </Grid>
         </Grid>
+        </Box>
 
-        {/* Contact Information */}
-        <Typography variant="h6" sx={{ mt: 4, mb: 2 }}>Contact Information</Typography>
+        {/* Contact Information Section */}
+        <Box sx={{ mb: 4 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+            <Avatar sx={{ bgcolor: '#48bb78', width: 40, height: 40 }}>
+              <ContactIcon sx={{ color: 'white', fontSize: 24 }} />
+            </Avatar>
+            <Box>
+              <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#2d3748' }}>
+                Contact Information
+              </Typography>
+              <Typography variant="body2" sx={{ color: '#64748b' }}>
+                Communication and emergency contact details
+              </Typography>
+            </Box>
+          </Box>
+          <Divider sx={{ mb: 3, bgcolor: '#48bb78', height: 2 }} />
         <Grid container spacing={3}>
           <Grid item xs={12} sm={6}>
             <TextField
@@ -297,9 +390,24 @@ function AddEmployees({ open, onClose, onSave }) {
             />
           </Grid>
         </Grid>
+        </Box>
 
-        {/* Address Information */}
-        <Typography variant="h6" sx={{ mt: 4, mb: 2 }}>Address Information</Typography>
+        {/* Address Information Section */}
+        <Box sx={{ mb: 4 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+            <Avatar sx={{ bgcolor: '#ed8936', width: 40, height: 40 }}>
+              <HomeIcon sx={{ color: 'white', fontSize: 24 }} />
+            </Avatar>
+            <Box>
+              <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#2d3748' }}>
+                Address Information
+              </Typography>
+              <Typography variant="body2" sx={{ color: '#64748b' }}>
+                Residential address and location details
+              </Typography>
+            </Box>
+          </Box>
+          <Divider sx={{ mb: 3, bgcolor: '#ed8936', height: 2 }} />
         <Grid container spacing={3}>
           <Grid item xs={12} sm={6}>
             <TextField
@@ -370,9 +478,24 @@ function AddEmployees({ open, onClose, onSave }) {
             />
           </Grid>
         </Grid>
+        </Box>
 
-        {/* Work Information */}
-        <Typography variant="h6" sx={{ mt: 4, mb: 2 }}>Work Information</Typography>
+        {/* Work Information Section */}
+        <Box sx={{ mb: 4 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+            <Avatar sx={{ bgcolor: '#9f7aea', width: 40, height: 40 }}>
+              <WorkIcon sx={{ color: 'white', fontSize: 24 }} />
+            </Avatar>
+            <Box>
+              <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#2d3748' }}>
+                Work Information
+              </Typography>
+              <Typography variant="body2" sx={{ color: '#64748b' }}>
+                Employment details and compensation
+              </Typography>
+            </Box>
+          </Box>
+          <Divider sx={{ mb: 3, bgcolor: '#9f7aea', height: 2 }} />
         <Grid container spacing={3}>
           <Grid item xs={12} sm={4}>
             <FormControl fullWidth margin="normal" error={!!errors.role}>
@@ -425,31 +548,56 @@ function AddEmployees({ open, onClose, onSave }) {
             />
           </Grid>
         </Grid>
+        </Box>
 
-          <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 6 }}>
+          {/* Enhanced Submit Button */}
+          <Box sx={{ display: "flex", justifyContent: "center", mt: 6 }}>
             <Button
               variant="contained"
-              color="primary"
               size="large"
               onClick={handleSave}
-              sx={{ minWidth: 180, fontWeight: 600, fontSize: 18 }}
-              type="button"
+              startIcon={<PersonAddIcon />}
+              sx={{
+                py: 2,
+                px: 6,
+                fontWeight: 'bold',
+                fontSize: 18,
+                borderRadius: 2,
+                minWidth: 250,
+                background: 'linear-gradient(45deg, #667eea, #764ba2)',
+                color: 'white',
+                textTransform: 'none',
+                boxShadow: '0 8px 25px rgba(102, 126, 234, 0.3)',
+                '&:hover': {
+                  background: 'linear-gradient(45deg, #5a67d8, #667eea)',
+                  transform: 'translateY(-2px)',
+                  boxShadow: '0 12px 35px rgba(102, 126, 234, 0.4)'
+                }
+              }}
             >
-              Submit Employee
+              Create Employee Profile
             </Button>
           </Box>
+          </Paper>
         </Box>
       </Dialog>
+      
+      {/* Enhanced Snackbar */}
       <Snackbar
         open={snackbar.open}
-        autoHideDuration={2500}
+        autoHideDuration={4000}
         onClose={() => setSnackbar({ ...snackbar, open: false })}
         anchorOrigin={{ vertical: "top", horizontal: "center" }}
       >
         <Alert
           onClose={() => setSnackbar({ ...snackbar, open: false })}
           severity={snackbar.severity}
-          sx={{ width: "100%" }}
+          sx={{ 
+            width: "100%",
+            borderRadius: 2,
+            boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+            fontWeight: 'bold'
+          }}
         >
           {snackbar.message}
         </Alert>

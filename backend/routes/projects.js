@@ -1,7 +1,8 @@
-const express = require('express');
+import express from 'express';
+
 const router = express.Router();
 
-module.exports = (pool) => {
+const projectsRouter = (pool) => {
   // Create a new project with tasks
   router.post('/', async (req, res) => {
     const {
@@ -304,3 +305,5 @@ router.get('/:id', async (req, res) => {
 
   return router;
 };
+
+export default projectsRouter;

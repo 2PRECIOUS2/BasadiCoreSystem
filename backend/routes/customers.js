@@ -1,6 +1,6 @@
-const express = require('express');
+import express from 'express';
 
-module.exports = (pool) => {
+const customersRoutes = (pool) => {
   const router = express.Router();
 
   // Function to get country abbreviations
@@ -840,3 +840,5 @@ router.get('/:id/amount-spent', async (req, res) => {
 
   return router;
 };
+
+export default customersRoutes;

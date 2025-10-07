@@ -1,6 +1,6 @@
-const express = require('express');
+import express from 'express';
 
-module.exports = (pool) => {
+const orderInvoiceRouter = (pool) => {
   const router = express.Router();
 
   // GET /api/order-invoice/:orderno
@@ -72,3 +72,5 @@ router.get('/:orderno', async (req, res) => {
 
   return router;
 };
+
+export default orderInvoiceRouter;

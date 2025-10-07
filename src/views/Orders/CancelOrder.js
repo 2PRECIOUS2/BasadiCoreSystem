@@ -10,31 +10,35 @@ import {
 } from "@mui/material";
 import axios from "axios";
 import { toast } from "react-toastify"; // ✅ make sure you installed react-toastify
+import { API_BASE_URL } from 'src/config';
 
 const CancelOrder = ({ open, onClose, orderno, onCancelled }) => {
   const [loading, setLoading] = useState(false);
 
-  const handleConfirmCancel = async () => {
-    if (!orderno) return;
-    setLoading(true);
-    try {
-      const res = await axios.put(`http://localhost:5000/api/orders/${orderno}/cancel`);
+const handleConfirmCancel = async () => {
+  if (!orderno) return;
+  setLoading(true);
+  try {
+    const res = await axios.put(
+      `${API_BASE_URL}/api/orders/${orderno}/cancel`,
+      {}, // no body, just params
+      { withCredentials: true }
+    );
 
-
-      toast.success(res.data.message || "Order cancelled successfully");
-      onCancelled(orderno);
-      onClose();
-    } catch (err) {
-      console.error("Cancel error:", err.response?.data || err.message);
-      const msg =
-        err.response?.data?.details || // backend error detail
-        err.response?.data?.error ||   // backend error field
-        "Something went wrong while cancelling the order.";
-      toast.error(msg);
-    } finally {
-      setLoading(false);
-    }
-  };
+    toast.success(res.data.message || "Order cancelled successfully");
+    onCancelled(orderno);
+    onClose();
+  } catch (err) {
+    console.error("Cancel error:", err.response?.data || err.message);
+    const msg =
+      err.response?.data?.details || // backend error detail
+      err.response?.data?.error ||   // backend error field
+      "Something went wrong while cancelling the order.";
+    toast.error(msg);
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <Dialog open={open} onClose={onClose}>

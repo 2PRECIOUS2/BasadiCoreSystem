@@ -4,7 +4,7 @@ import SidebarItems from './SidebarItems';
 import { Sidebar } from 'react-mui-sidebar';
 import Logo from '../shared/logo/Logo';
 
-const MSidebar = ({ mode, setMode, isSidebarOpen, onSidebarClose }) => {
+const MSidebar = ({ mode, setMode, isSidebarOpen, isMobileSidebarOpen, onSidebarClose }) => {
   const lgUp = useMediaQuery((theme) => theme.breakpoints.up('lg'));
   const sidebarWidth = '270px';
 
@@ -67,7 +67,7 @@ const MSidebar = ({ mode, setMode, isSidebarOpen, onSidebarClose }) => {
   return (
     <Drawer
       anchor="left"
-      open={isSidebarOpen}
+      open={isMobileSidebarOpen}
       onClose={onSidebarClose}
       variant="temporary"
       PaperProps={{

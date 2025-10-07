@@ -1,36 +1,55 @@
-require('dotenv').config();
-const { pool } = require('./db');
+import 'dotenv/config';
+import dbModule from './db/index.js';
 
 async function testExactQuery() {
   try {
-    console.log('🔍 Testing the exact SQL query from the API...');
+    console.log('🔍 Testing the exact employee login query...');
     
-    const result = await pool.query(`
-      SELECT 
-        cust_id as "customerNumber",
-        cust_fname as "firstName",
-        cust_lname as "lastName",
-        COALESCE(cust_fname, '') || ' ' || COALESCE(cust_lname, '') as "customerName",
-        cust_email as email,
-        phone_number as "phoneNumber",
-        country_code as "countryCode",
-        phone_prefix as "phonePrefix",
-        full_phone as phone,
-        street_address as "streetAddress",
-        city,
-        state_province as "stateProvince",
-        postal_code as "postalCode",
-        country,
-        TO_CHAR(date_of_birth, 'YYYY-MM-DD') as "dateOfBirth",
-        cust_gender as gender,
-        cust_status as status,
-        created_at as "createdAt",
-        updated_at as "updatedAt"
-      FROM customers 
-      ORDER BY 
-        CASE WHEN cust_status = 'active' THEN 1 ELSE 2 END,
-        cust_id DESC
-    `);
+    // Test basic connection first
+    const timeResult = await dbModule.pool.query('SELECT NOW() as current_time');
+    console.log('✅ Database connected:', timeResult.rows[0]);
+    
+    // Test the exact query from login route
+    const email = 'janmoloto@gmail.com';
+    const employeeId = 15;
+    
+    console.log(`🔍 Testing query: SELECT * FROM employees WHERE email = '${email}' AND employee_id = ${employeeId}`);
+    
+    const empResult = await dbModule.pool.query(
+      'SELECT * FROM employees WHERE email = $1 AND employee_id = $2', 
+      [email, employeeId]
+    );
+    
+    console.log('📋 Query result:', {
+      rowCount: empResult.rowCount,
+      rows: empResult.rows.length
+    });
+    
+    if (empResult.rows.length > 0) {
+      const employee = empResult.rows[0];
+      console.log('👤 Found employee:', {
+        id: employee.employee_id,
+        email: employee.email,
+        firstName: employee.first_name,
+        lastName: employee.last_name,
+        role: employee.role,
+        employmentStatus: employee.employment_status
+      });
+      
+      console.log('✅ Employee authentication would succeed');
+    } else {
+      console.log('❌ No employee found - authentication would fail');
+    }
+    
+  } catch (error) {
+    console.error('💥 Database error:', error.message);
+    console.error('Full error:', error);
+  } finally {
+    await dbModule.pool.end();
+  }
+}
+
+testExactQuery();
     
     console.log('📊 Query returned', result.rows.length, 'rows');
     

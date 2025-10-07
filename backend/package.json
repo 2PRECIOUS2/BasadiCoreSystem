@@ -1,22 +1,29 @@
 {
   "name": "backend",
   "version": "1.0.0",
+  "type": "module",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "NODE_OPTIONS=--max_old_space_size=4096 react-scripts build",
-    "start": "react-scripts start",
-    "dev": "set NODE_OPTIONS=--max_old_space_size=4096 && react-scripts start"
+    "start": "node Server.js",
+    "dev": "nodemon Server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
-  
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@sendgrid/mail": "^8.1.6",
+    "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
-    "pg": "^8.16.0"
+    "express-session": "^1.18.2",
+    "multer": "^2.0.2",
+    "node-fetch": "^3.3.2",
+    "nodemailer": "^7.0.6",
+    "pg": "^8.16.0",
+    "sharp": "^0.34.4",
+    "uuid": "^13.0.0"
   }
 }

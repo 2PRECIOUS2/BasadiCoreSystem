@@ -1,6 +1,6 @@
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-module.exports = (pool) => {
+const ordersRouter = (pool) => {
 
 // GET /api/orders - Fixed SQL query
 router.get('/', async (req, res) => {
@@ -297,3 +297,5 @@ router.put('/:orderno/cancel', async (req, res) => {
 
 return router;
 };
+
+export default ordersRouter;

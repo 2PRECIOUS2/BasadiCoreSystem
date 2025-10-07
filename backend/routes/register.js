@@ -1,9 +1,10 @@
-const express = require('express');
-const router = express.Router();
-const bcrypt = require('bcrypt');
-const nodemailer = require('nodemailer');
+import express from 'express';
+import bcrypt from 'bcrypt';
+import nodemailer from 'nodemailer';
 
-module.exports = (pool) => {
+const router = express.Router();
+
+const registerRoutes = (pool) => {
   router.post('/', async (req, res) => {
     const { firstName, lastName, email, password, role } = req.body;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -61,3 +62,5 @@ module.exports = (pool) => {
   });
   return router;
 };
+
+export default registerRoutes;

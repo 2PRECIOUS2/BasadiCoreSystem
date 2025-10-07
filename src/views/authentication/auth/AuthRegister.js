@@ -153,7 +153,10 @@ const [passwordError, setPasswordError] = useState('');
                 <em>None</em>
               </MenuItem>
               <MenuItem value="admin">Admin</MenuItem>
-              <MenuItem value="accountant">Accountant</MenuItem>
+                <MenuItem value="accountant">Accountant</MenuItem>
+                <MenuItem value="trainer">Trainer</MenuItem>
+                <MenuItem value="supporter">Supporter</MenuItem>
+
             </Select>
           </FormControl>
         </Stack>

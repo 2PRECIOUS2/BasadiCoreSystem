@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Button, Table, TableBody, TableCell, TableHead, TableRow, Dialog, DialogTitle, DialogContent, Typography} from '@mui/material';
 import IconButton from '@mui/material/IconButton';
 import CloseIcon from '@mui/icons-material/Close';
+import { API_BASE_URL } from '../../config';
 
 const InvoiceList = () => {
   const [invoices, setInvoices] = useState([]);
@@ -10,13 +11,17 @@ const InvoiceList = () => {
   const [invoiceItems, setInvoiceItems] = useState([]);
 
   useEffect(() => {
-    fetch('http://localhost:5000/api/stock/invoices')
+    fetch(`${API_BASE_URL}/api/stock/invoices`, {
+      credentials: 'include'
+    })
       .then(res => res.json())
       .then(data => setInvoices(data));
   }, []);
 
    const handleView = async (invoice) => {
-    const res = await fetch(`http://localhost:5000/api/stock/invoice/${invoice.invoice_number}/download`);
+    const res = await fetch(`${API_BASE_URL}/api/stock/invoice/${invoice.invoice_number}/download`, {
+      credentials: 'include'
+    });
     const blob = await res.blob();
     const url = window.URL.createObjectURL(blob);
     setPdfUrl(url);
@@ -50,7 +55,7 @@ const InvoiceList = () => {
               <TableCell>
                 <Button onClick={() => handleView(inv)}>View</Button>
                 <Button
-                  href={`http://localhost:5000/api/stock/invoice/${inv.invoice_number}/download`}
+                  href={`${API_BASE_URL}/api/stock/invoice/${inv.invoice_number}/download`}
                   target="_blank"
                   rel="noopener"
                 >

@@ -22,11 +22,27 @@ import {
   ListItemSecondaryAction,
   Snackbar,
   Alert,
+  Paper,
+  Avatar,
+  Divider,
+  Tooltip,
+  CircularProgress
 } from "@mui/material";
-import CloseIcon from "@mui/icons-material/Close";
-import AddIcon from "@mui/icons-material/Add";
-import DeleteIcon from "@mui/icons-material/Delete";
+import {
+  Close as CloseIcon,
+  Add as AddIcon,
+  Delete as DeleteIcon,
+  Work as WorkIcon,
+  EventNote,
+  Schedule,
+  LocationOn,
+  Business,
+  Assignment,
+  Save,
+  Group
+} from "@mui/icons-material";
 import { set } from "lodash";
+import { API_BASE_URL } from 'src/config';
 
 // Project categories
 const categories = [
@@ -49,22 +65,59 @@ export default function CreateProject({ open, onClose, onSave }) {
   const [deadline, setDeadline] = useState("");
   const [location, setLocation] = useState("");
   const [partner, setPartner] = useState("");
+  const [description, setDescription] = useState("");
+  const [staffAssignment, setStaffAssignment] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" });
   const [errors, setErrors] = useState({});
+
+  // Dummy staff data for development  
+  const availableStaff = [
+    { id: 1, name: "John Smith", role: "Project Manager" },
+    { id: 2, name: "Sarah Johnson", role: "Developer" },
+    { id: 3, name: "Mike Brown", role: "Designer" },
+    { id: 4, name: "Lisa Davis", role: "QA Engineer" },
+    { id: 5, name: "Tom Wilson", role: "Business Analyst" }
+  ];
+
+  // Legacy task system (for backward compatibility)
   const [tasks, setTasks] = useState([]);
   const [taskInput, setTaskInput] = useState("");
   const [taskStaff, setTaskStaff] = useState([]);
   const [taskDeadline, setTaskDeadline] = useState("");
   const [notes, setNotes] = useState("");
-  const [staffList, setStaffList] = useState([]);
+  const [staffList, setStaffList] = useState([
+    // Dummy staff data as fallback
+    { employee_id: 'EMP001', first_name: 'John', last_name: 'Doe', email: 'john.doe@basadi.com' },
+    { employee_id: 'EMP002', first_name: 'Jane', last_name: 'Smith', email: 'jane.smith@basadi.com' },
+    { employee_id: 'EMP003', first_name: 'Mike', last_name: 'Johnson', email: 'mike.johnson@basadi.com' }
+  ]);
 
-  // Fetch staff from backend
+  // Fetch staff from backend with proper error handling
   useEffect(() => {
-    fetch("/api/projects/employees")
-      .then((res) => res.json())
-      .then((data) => setStaffList(data))
-      .catch(() => setStaffList([]));
-  }, []);
+    const fetchStaff = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/projects/employees`, { 
+          credentials: 'include' 
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setStaffList(Array.isArray(data) ? data : []);
+        } else {
+          console.warn('Failed to fetch staff list, using empty array');
+          setStaffList([]);
+        }
+      } catch (error) {
+        console.warn('Error fetching staff list:', error);
+        setStaffList([]);
+      }
+    };
+
+    if (open) {
+      fetchStaff();
+    }
+  }, [open]);
 
   // Add task with staff assignment and deadline
   const handleAddTask = () => {
@@ -100,90 +153,86 @@ export default function CreateProject({ open, onClose, onSave }) {
     if (!projectName) newErrors.projectName = "Project Name is required";
     if (!category) newErrors.category = "Category is required";
     if (!startDate) newErrors.startDate = "Start Date is required";
-    if (startDate && deadline && startDate > deadline) newErrors.startDate = "Start Date cannot be after Deadline";
-    tasks.forEach((t, idx) => {
-      if (t.deadline && (t.deadline < startDate || t.deadline > deadline)) {
-        newErrors.tasks = "Task deadlines must be within project start and deadline dates";
-      }
-    });
-
     if (!deadline) newErrors.deadline = "Deadline is required";
     if (!location) newErrors.location = "Location is required";
-    if (tasks.length === 0) newErrors.tasks = "At least one project task is required";
+    if (!description) newErrors.description = "Project description is required";
+    if (staffAssignment.length === 0) newErrors.staffAssignment = "At least one staff member must be assigned";
+    
+    if (startDate && deadline && startDate > deadline) {
+      newErrors.deadline = "Deadline cannot be before start date";
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSave = async () => {
-  if (!validate()) {
-    setSnackbar({ open: true, message: "Please fill in all required fields.", severity: "error" });
-    return;
-  }
-  const project = {
-    projectName,
-    category,
-    startDate,
-    deadline,
-    location,
-    partner,
-    tasks: tasks.map(t => ({
-      task: t.name,
-      staffId: t.assignedStaff[0] || null,
-      taskDeadline: t.deadline
-    })),
-    additionalNotes: notes,
-    status: "active"
-  };
-  try {
-    const response = await fetch("/api/projects", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(project)
-    });
-    if (response.ok) {
-      setSnackbar({ open: true, message: "Project created successfully!", severity: "success" });
-      // Clear fields
-      setProjectName("");
-      setCategory("");
-      setStartDate("");
-      setDeadline("");
-      setLocation("");
-      setPartner("");
-      setTasks([]);
-      setTaskInput("");
-      setTaskStaff([]);
-      setTaskDeadline("");
-      setNotes("");
-      // Refresh project list in parent
-      if (onSave) onSave();
-      // Optionally close dialog after a short delay
-      setTimeout(() => {
-        if (onClose) onClose();
-      }, 1200);
-    } else {
-      const err = await response.json();
-      setSnackbar({ open: true, message: err.error || "Failed to create project.", severity: "error" });
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!validate()) {
+      setSnackbar({ open: true, message: "Please fill in all required fields.", severity: "error" });
+      return;
     }
-  } catch (err) {
-    setSnackbar({ open: true, message: "Failed to create project.", severity: "error" });
-  }
-};
-   
+    
+    setLoading(true);
+    
+    const projectData = {
+      projectName,
+      category,
+      startDate,
+      deadline,
+      location,
+      partner,
+      description,
+      staffAssignment,
+      status: "active"
+    };
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/projects`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(projectData),
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        setSnackbar({ open: true, message: "Project created successfully!", severity: "success" });
+        handleClose();
+        if (onSave) onSave();
+      } else {
+        const errorData = await response.json();
+        setSnackbar({ 
+          open: true, 
+          message: errorData.message || "Failed to create project", 
+          severity: "error" 
+        });
+      }
+    } catch (error) {
+      console.error("Error creating project:", error);
+      setSnackbar({ 
+        open: true, 
+        message: "Network error. Please try again.", 
+        severity: "error" 
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  // Reset form on close
   const handleClose = () => {
+    // Reset form
     setProjectName("");
     setCategory("");
     setStartDate("");
     setDeadline("");
     setLocation("");
     setPartner("");
-    setTasks([]);
-    setTaskInput("");
-    setTaskStaff([]);
-    setTaskDeadline("");
-    setNotes("");
-    if (onClose) onClose();
+    setDescription("");
+    setStaffAssignment([]);
+    setErrors({});
+    setLoading(false);
+    onClose();
   };
 
   return (
@@ -192,240 +241,387 @@ export default function CreateProject({ open, onClose, onSave }) {
       open={open}
       onClose={handleClose}
       TransitionComponent={Transition}
+      PaperProps={{
+        sx: {
+          backgroundColor: '#f8fafc',
+          backgroundImage: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+        }
+      }}
     >
-      <AppBar sx={{ position: "relative" }}>
-        <Toolbar>
-          <IconButton edge="start" color="inherit" onClick={handleClose}>
-            <CloseIcon />
-          </IconButton>
-          <Typography sx={{ ml: 2, flex: 1 }} variant="h6" component="div">
-            Create Project
-          </Typography>
-        </Toolbar>
-      </AppBar>
-      <Box sx={{ p: 4, maxWidth: 900, mx: "auto" }}>
-        <Grid container spacing={3}>
-          <Grid item xs={12} sm={6}>
-            <TextField
-              label="Project Name"
-              value={projectName}
-              onChange={(e) => setProjectName(e.target.value)}
-              required
-              fullWidth
-              margin="normal"
-              error={!!errors.projectName}
-              helperText={errors.projectName}
-            />
-          </Grid>
-          <Grid item xs={12} sm={6}>
-            <FormControl fullWidth margin="normal" error={!!errors.category}>
-              <InputLabel>Category</InputLabel>
-              <Select
-                value={category}
-                label="Category"
-                onChange={(e) => setCategory(e.target.value)}
-                required
-              >
-                {categories.map((cat) => (
-                  <MenuItem key={cat.value} value={cat.value}>
-                    {cat.label}
-                  </MenuItem>
-                ))}
-              </Select>
-              {errors.category && (
-                <Typography color="error" variant="caption">{errors.category}</Typography>
-              )}
-            </FormControl>
-          </Grid>
-          <Grid item xs={12} sm={6}>
-            <TextField
-              label="Start Date"
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              InputLabelProps={{ shrink: true }}
-              fullWidth
-              margin="normal"
-              required
-              error={!!errors.startDate}
-              helperText={errors.startDate}
-            />
-          </Grid>
-          <Grid item xs={12} sm={6}>
-            <TextField
-              label="Deadline"
-              type="date"
-              value={deadline}
-              onChange={(e) => setDeadline(e.target.value)}
-              InputLabelProps={{ shrink: true }}
-              fullWidth
-              margin="normal"
-              required
-              error={!!errors.deadline}
-              helperText={errors.deadline}
-              inputProps={{
-                min: startDate || undefined
+      <form onSubmit={handleSubmit}>
+      <Box sx={{ 
+        minHeight: '100vh', 
+        display: 'flex', 
+        flexDirection: 'column',
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+      }}>
+        {/* Enhanced Header */}
+        <Box sx={{ 
+          bgcolor: 'rgba(255,255,255,0.95)', 
+          backdropFilter: 'blur(10px)',
+          borderBottom: '3px solid #667eea',
+          p: 3,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Avatar sx={{ 
+              bgcolor: '#667eea', 
+              width: 56, 
+              height: 56,
+              boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)'
+            }}>
+              <WorkIcon sx={{ fontSize: 32, color: 'white' }} />
+            </Avatar>
+            <Box>
+              <Typography variant="h4" sx={{ 
+                fontWeight: 'bold',
+                background: 'linear-gradient(45deg, #667eea, #764ba2)',
+                backgroundClip: 'text',
+                color: 'transparent',
+                mb: 0.5
+              }}>
+                Create New Project
+              </Typography>
+              <Typography variant="h6" sx={{ 
+                color: '#64748b',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1
+              }}>
+                <Business sx={{ fontSize: 20 }} />
+                Plan and organize your project workflow
+              </Typography>
+            </Box>
+          </Box>
+          <Tooltip title="Close">
+            <IconButton 
+              onClick={handleClose} 
+              sx={{ 
+                color: '#667eea',
+                '&:hover': { 
+                  bgcolor: 'rgba(102, 126, 234, 0.1)',
+                  transform: 'scale(1.1)'
+                }
               }}
-            />
-          </Grid>
-        </Grid>
-          <Grid item xs={12} sm={6}>
-            <TextField
-              label="Location"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              fullWidth
-              margin="normal"
-              required
-              error={!!errors.location}
-              helperText={errors.location}
-            />
-          </Grid>
-          <Grid item xs={12} sm={6}>
-            <TextField
-              label="Partner (optional)"
-              value={partner}
-              onChange={(e) => setPartner(e.target.value)}
-              fullWidth
-              margin="normal"
-            />
-          </Grid>
-          {/* Project Tasks List */}
-          <Grid item xs={12}>
-            <Typography variant="subtitle1" sx={{ mt: 2 }}>
-              Project Tasks
-            </Typography>
-            <Grid container spacing={2} alignItems="center" sx={{ mt: 1 }}>
-              <Grid item xs={12} sm={4}>
-                <TextField
-                  label="Task"
-                  value={taskInput}
-                  onChange={(e) => setTaskInput(e.target.value)}
-                  fullWidth
-                  error={!!errors.tasks}
-                  helperText={errors.tasks}
-                />
-              </Grid>
-              <Grid item xs={12} sm={4}>
-                <FormControl fullWidth>
-                  <InputLabel>Assign Staff</InputLabel>
-                  <Select
-                    multiple
-                    value={taskStaff}
-                    onChange={(e) => setTaskStaff(e.target.value)}
-                    input={<OutlinedInput label="Assign Staff" />}
-                    renderValue={(selected) => (
-                      <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
-                        {selected.map((id) => {
-                          const s = staffList.find((st) => st.employee_id === id);
-                          return (
-                            <Chip key={id} label={s ? `${s.first_name} ${s.last_name}` : id} />
-                          );
-                        })}
-                      </Box>
-                    )}
-                  >
-                    {staffList.map((s) => (
-                      <MenuItem key={s.employee_id} value={s.employee_id}>
-                        {s.first_name} {s.last_name} ({s.email})
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={12} sm={3}>
-                <TextField
-                  label="Task Deadline"
-                  type="date"
-                  value={taskDeadline}
-                  onChange={(e) => setTaskDeadline(e.target.value)}
-                  InputLabelProps={{ shrink: true }}
-                  fullWidth
-                />
-              </Grid>
-              <Grid item xs={12} sm={1}>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  startIcon={<AddIcon />}
-                  onClick={handleAddTask}
-                  sx={{ height: 56, minWidth: 80, mt: { xs: 2, sm: 0 } }}
-                  fullWidth
-                >
-                  ADD
-                </Button>
-              </Grid>
-            </Grid>
-            <List dense sx={{ mt: 1 }}>
-              {tasks.map((task, idx) => (
-                <ListItem key={idx} divider>
-                  <ListItemText
-                    primary={task.name}
-                    secondary={
-                      <>
-                        {task.assignedStaff.length > 0
-                          ? "Assigned: " +
-                            task.assignedStaff
-                              .map(
-                                (id) =>
-                                  staffList.find((s) => s.employee_id === id)
-                                    ? `${staffList.find((s) => s.employee_id === id).first_name} ${staffList.find((s) => s.employee_id === id).last_name}`
-                                    : id
-                              )
-                              .join(", ")
-                          : "Unassigned"}
-                        <br />
-                        Deadline: {task.deadline}
-                      </>
-                    }
-                  />
-                  <ListItemSecondaryAction>
-                    <IconButton edge="end" onClick={() => handleRemoveTask(idx)}>
-                      <DeleteIcon />
-                    </IconButton>
-                  </ListItemSecondaryAction>
-                </ListItem>
-              ))}
-            </List>
-          </Grid>
-          <Grid item xs={12}>
-            <TextField
-              label="Additional Notes"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              fullWidth
-              multiline
-              minRows={3}
-              margin="normal"
-            />
-          </Grid>
-        
-        {/* Centered Save button at the bottom */}
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 6 }}>
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={handleSave}
-            sx={{ minWidth: 200, fontWeight: 600, fontSize: 18 }}
-          >
-            SAVE
-          </Button>
+            >
+              <CloseIcon sx={{ fontSize: 30 }} />
+            </IconButton>
+          </Tooltip>
         </Box>
-        <Snackbar
-          open={snackbar.open}
-          autoHideDuration={2500}
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-          anchorOrigin={{ vertical: "top", horizontal: "center" }}
-        >
-          <Alert
-            onClose={() => setSnackbar({ ...snackbar, open: false })}
-            severity={snackbar.severity}
-            sx={{ width: "100%" }}
-          >
-            {snackbar.message}
-          </Alert>
-        </Snackbar>
+
+        {/* Main Content */}
+        <Box sx={{ 
+          flex: 1, 
+          p: 4, 
+          display: 'flex', 
+          justifyContent: 'center',
+          alignItems: 'flex-start'
+        }}>
+          <Paper sx={{ 
+            maxWidth: 1000, 
+            width: '100%',
+            p: 4,
+            borderRadius: 3,
+            background: 'rgba(255,255,255,0.95)',
+            backdropFilter: 'blur(10px)',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
+            border: '1px solid rgba(255,255,255,0.2)'
+          }}>
+            {/* Project Details Section */}
+            <Box sx={{ mb: 4 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+                <EventNote sx={{ color: '#667eea', fontSize: 28 }} />
+                <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#2d3748' }}>
+                  Project Details
+                </Typography>
+              </Box>
+              <Divider sx={{ mb: 3, borderColor: '#667eea', borderWidth: 1 }} />
+              
+              <Grid container spacing={3}>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    label="Project Name"
+                    value={projectName}
+                    onChange={(e) => setProjectName(e.target.value)}
+                    required
+                    fullWidth
+                    error={!!errors.projectName}
+                    helperText={errors.projectName}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        '&:hover fieldset': { borderColor: '#667eea', borderWidth: 2 },
+                        '&.Mui-focused fieldset': { borderColor: '#667eea', borderWidth: 2 }
+                      },
+                      '& .MuiInputLabel-root.Mui-focused': { color: '#667eea' }
+                    }}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <FormControl fullWidth error={!!errors.category}>
+                    <InputLabel>Project Category</InputLabel>
+                    <Select
+                      value={category}
+                      label="Project Category"
+                      onChange={(e) => setCategory(e.target.value)}
+                      required
+                      sx={{
+                        '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#667eea', borderWidth: 2 },
+                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#667eea', borderWidth: 2 }
+                      }}
+                    >
+                      {categories.map((cat) => (
+                        <MenuItem key={cat.value} value={cat.value}>
+                          {cat.label}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                    {errors.category && (
+                      <Typography color="error" variant="caption">{errors.category}</Typography>
+                    )}
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    label="Start Date"
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                    fullWidth
+                    required
+                    error={!!errors.startDate}
+                    helperText={errors.startDate}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        '&:hover fieldset': { borderColor: '#48bb78', borderWidth: 2 },
+                        '&.Mui-focused fieldset': { borderColor: '#48bb78', borderWidth: 2 }
+                      },
+                      '& .MuiInputLabel-root.Mui-focused': { color: '#48bb78' }
+                    }}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    label="Deadline"
+                    type="date"
+                    value={deadline}
+                    onChange={(e) => setDeadline(e.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                    fullWidth
+                    required
+                    error={!!errors.deadline}
+                    helperText={errors.deadline}
+                    inputProps={{
+                      min: startDate || undefined
+                    }}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        '&:hover fieldset': { borderColor: '#ed8936', borderWidth: 2 },
+                        '&.Mui-focused fieldset': { borderColor: '#ed8936', borderWidth: 2 }
+                      },
+                      '& .MuiInputLabel-root.Mui-focused': { color: '#ed8936' }
+                    }}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    label="Location"
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    fullWidth
+                    required
+                    error={!!errors.location}
+                    helperText={errors.location}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        '&:hover fieldset': { borderColor: '#805ad5', borderWidth: 2 },
+                        '&.Mui-focused fieldset': { borderColor: '#805ad5', borderWidth: 2 }
+                      },
+                      '& .MuiInputLabel-root.Mui-focused': { color: '#805ad5' }
+                    }}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    label="Partner (Optional)"
+                    value={partner}
+                    onChange={(e) => setPartner(e.target.value)}
+                    fullWidth
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        '&:hover fieldset': { borderColor: '#667eea', borderWidth: 2 },
+                        '&.Mui-focused fieldset': { borderColor: '#667eea', borderWidth: 2 }
+                      },
+                      '& .MuiInputLabel-root.Mui-focused': { color: '#667eea' }
+                    }}
+                  />
+                </Grid>
+              </Grid>
+            </Box>
+
+            {/* Staff Assignment Section */}
+            <Box sx={{ mb: 4 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+                <Group sx={{ color: '#667eea', fontSize: 28 }} />
+                <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#2d3748' }}>
+                  Staff Assignment
+                </Typography>
+              </Box>
+              <Divider sx={{ mb: 3, borderColor: '#667eea', borderWidth: 1 }} />
+              
+              <FormControl fullWidth error={!!errors.staffAssignment}>
+                <InputLabel>Assign Staff Members</InputLabel>
+                <Select
+                  multiple
+                  value={staffAssignment}
+                  onChange={(e) => setStaffAssignment(e.target.value)}
+                  required
+                  renderValue={(selected) => (
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                      {selected.map((value) => {
+                        const staff = availableStaff.find(s => s.id === value);
+                        return (
+                          <Chip key={value} label={staff?.name || value} size="small" 
+                            sx={{ 
+                              bgcolor: '#667eea', 
+                              color: 'white',
+                              '& .MuiChip-deleteIcon': { color: 'white' }
+                            }} 
+                          />
+                        );
+                      })}
+                    </Box>
+                  )}
+                  sx={{
+                    '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#667eea', borderWidth: 2 },
+                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#667eea', borderWidth: 2 }
+                  }}
+                >
+                  {availableStaff.map((staff) => (
+                    <MenuItem key={staff.id} value={staff.id}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <Avatar sx={{ width: 32, height: 32, bgcolor: '#667eea' }}>
+                          {staff.name.charAt(0)}
+                        </Avatar>
+                        <Box>
+                          <Typography>{staff.name}</Typography>
+                          <Typography variant="caption" color="textSecondary">
+                            {staff.role}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </MenuItem>
+                  ))}
+                </Select>
+                {errors.staffAssignment && (
+                  <Typography color="error" variant="caption">{errors.staffAssignment}</Typography>
+                )}
+              </FormControl>
+            </Box>
+
+            {/* Description Section */}
+            <Box sx={{ mb: 4 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+                <Assignment sx={{ color: '#667eea', fontSize: 28 }} />
+                <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#2d3748' }}>
+                  Project Description
+                </Typography>
+              </Box>
+              <Divider sx={{ mb: 3, borderColor: '#667eea', borderWidth: 1 }} />
+              
+              <TextField
+                label="Describe your project goals, requirements, and deliverables"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                multiline
+                rows={6}
+                fullWidth
+                required
+                error={!!errors.description}
+                helperText={errors.description}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    '&:hover fieldset': { borderColor: '#667eea', borderWidth: 2 },
+                    '&.Mui-focused fieldset': { borderColor: '#667eea', borderWidth: 2 }
+                  },
+                  '& .MuiInputLabel-root.Mui-focused': { color: '#667eea' }
+                }}
+              />
+            </Box>
+
+            {/* Action Buttons */}
+            <Box sx={{ 
+              display: 'flex', 
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              pt: 3,
+              borderTop: '2px solid #e2e8f0'
+            }}>
+              <Button
+                onClick={handleClose}
+                variant="outlined"
+                size="large"
+                sx={{
+                  borderColor: '#94a3b8',
+                  color: '#64748b',
+                  px: 4,
+                  py: 1.5,
+                  '&:hover': {
+                    borderColor: '#64748b',
+                    backgroundColor: 'rgba(100, 116, 139, 0.04)'
+                  }
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                variant="contained"
+                size="large"
+                disabled={loading}
+                startIcon={loading ? <CircularProgress size={20} /> : <Save />}
+                sx={{
+                  background: 'linear-gradient(45deg, #667eea, #764ba2)',
+                  color: 'white',
+                  px: 4,
+                  py: 1.5,
+                  fontWeight: 'bold',
+                  '&:hover': {
+                    background: 'linear-gradient(45deg, #5a67d8, #6b46c1)',
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 8px 25px rgba(102, 126, 234, 0.3)'
+                  },
+                  '&:disabled': {
+                    background: '#94a3b8'
+                  }
+                }}
+              >
+                {loading ? 'Creating...' : 'Create Project'}
+              </Button>
+            </Box>
+          </Paper>
+        </Box>
       </Box>
+
+      {/* Snackbar for notifications */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+      >
+        <Alert
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          severity={snackbar.severity}
+          sx={{ width: "100%" }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+      </form>
     </Dialog>
   );
 }

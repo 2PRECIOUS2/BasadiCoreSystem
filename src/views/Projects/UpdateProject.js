@@ -20,6 +20,7 @@ import AddIcon from "@mui/icons-material/Add";
 import CloseIcon from "@mui/icons-material/Close";
 import DeleteIcon from "@mui/icons-material/Delete";
 import LinearProgress from "@mui/material/LinearProgress";
+import { API_BASE_URL } from 'src/config';
 
 const Transition = React.forwardRef(function Transition(props, ref) {
   return <Slide direction="up" ref={ref} {...props} />;
@@ -70,18 +71,18 @@ export default function UpdateProject({ open, onClose, project, onSave }) {
 
 
   useEffect(() => {
-    fetch("/api/projects/employees")
-      .then((res) => res.json())
-      .then((data) => setStaffList(data))
-      .catch(() => setStaffList([]));
+    fetch(`${API_BASE_URL}/api/projects/employees`)
+    .then(res => res.json())
+    .then(data => setStaffList(data))
+    .catch(() => setStaffList([]));
   }, []);
 
   useEffect(() => {
     // Always fetch the latest project details (with tasks) from backend
     if (project && project.id) {
-      fetch(`/api/projects/${project.id}`)
-        .then(res => res.json())
-        .then(data => {
+      fetch(`${API_BASE_URL}/api/projects/${project.id}`)
+      .then(res => res.json())
+      .then(data => {
           setStartDate(formatDate(getField(data, "startDate", "start_date")));
           setDeadline(formatDate(getField(data, "deadline", "deadline")));
           setLocation(getField(data, "location", "location"));
@@ -213,10 +214,11 @@ else if (percent > 30) percentColor = "#ffa726"; // orange
       })),
     };
     try {
-      const response = await fetch(`/api/projects/${project.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(updatedProject)
+      const response = await fetch(`${API_BASE_URL}/api/projects/${project.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include", // if using cookie-based sessions
+      body: JSON.stringify(updatedProject)
       });
       if (response.ok) {
         setSnackbar({ open: true, message: "Project updated successfully!", severity: "success" });

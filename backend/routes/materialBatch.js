@@ -1,6 +1,6 @@
-const express = require('express');
+import express from 'express';
 
-module.exports = (pool) => {
+const materialBatchRoutes = (pool) => {
   const router = express.Router();
 
   router.put('/batch/:batch_id/status', async (req, res) => {
@@ -62,3 +62,5 @@ module.exports = (pool) => {
 
   return router;
 };
+
+export default materialBatchRoutes;

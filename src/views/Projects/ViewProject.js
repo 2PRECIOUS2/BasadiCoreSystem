@@ -26,6 +26,8 @@ import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
+import { API_BASE_URL } from 'src/config';
+
 
 // Helper for status circle with arrow
 function StatusCircle({ status }) {
@@ -113,17 +115,20 @@ export default function ViewProject({ projectId }) {
   const [showOrderDetails, setShowOrderDetails] = useState(false);
 
   useEffect(() => {
-    if (!projectId) return;
-    fetch(`http://localhost:5000/api/projects/${projectId}`)
-      .then(res => res.json())
-      .then(data => {
-        console.log('Project data with orders:', data);
-        setProject(data);
-      })
-      .catch(err => console.error('Error fetching project:', err));
-  }, [projectId]);
+  if (!projectId) return;
 
-  if (!project) return null;
+  fetch(`${API_BASE_URL}/api/projects/${projectId}`, {
+    credentials: "include", // if using cookie-based sessions
+  })
+    .then(res => res.json())
+    .then(data => {
+      console.log('Project data with orders:', data);
+      setProject(data);
+    })
+    .catch(err => console.error('Error fetching project:', err));
+}, [projectId]);
+
+if (!project) return null;
 
   let status = project.status || "Not Started";
   if (project.totalTasks > 0) {

@@ -13,6 +13,10 @@ import PageContainer from 'src/components/container/PageContainer';
 import DashboardCard from '../../components/shared/DashboardCard';
 import CustomerForm from './CustomerForm';
 import CustomersList from './CustomersList';
+import { API_BASE_URL } from '../../config';
+import withRoleProtection from '../../components/shared/withRoleProtection';
+import PermissionGate from '../../components/shared/PermissionGate';
+import { hasPermission, getUserDisplayInfo } from '../../utils/rbac';
 
 const CustomersPage = () => {
   const [customers, setCustomers] = useState([]);
@@ -21,14 +25,15 @@ const CustomersPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Fetch customers from API - Direct fetch like other components
   const fetchCustomers = async () => {
     try {
       setLoading(true);
       setError('');
       
-      console.log('Fetching customers from: http://localhost:5000/api/customers');
-      const response = await fetch('http://localhost:5000/api/customers');
+      console.log(`Fetching customers from: ${API_BASE_URL}/api/customers`);
+      const response = await fetch(`${API_BASE_URL}/api/customers`, {
+        credentials: 'include'
+      });
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -89,11 +94,12 @@ const CustomersPage = () => {
     }
 
     try {
-      const response = await fetch(`http://localhost:5000/api/customers/${customerId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/customers/${customerId}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
       });
       
       if (!response.ok) {
@@ -120,21 +126,23 @@ const CustomersPage = () => {
     try {
       let response;
       if (editingCustomer) {
-        console.log(`📡 Making PUT request to: http://localhost:5000/api/customers/${editingCustomer.id}`);
-        response = await fetch(`http://localhost:5000/api/customers/${editingCustomer.id}`, {
+        console.log(`📡 Making PUT request to: ${API_BASE_URL}/api/customers/${editingCustomer.id}`);
+        response = await fetch(`${API_BASE_URL}/api/customers/${editingCustomer.id}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
           },
+          credentials: 'include',
           body: JSON.stringify(customerData),
         });
       } else {
-        console.log(`📡 Making POST request to: http://localhost:5000/api/customers`);
-        response = await fetch('http://localhost:5000/api/customers', {
+        console.log(`📡 Making POST request to: ${API_BASE_URL}/api/customers`);
+        response = await fetch(`${API_BASE_URL}/api/customers`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
+          credentials: 'include',
           body: JSON.stringify(customerData),
         });
       }
@@ -167,7 +175,9 @@ const CustomersPage = () => {
 
   const testServerConnection = async () => {
     try {
-      const response = await fetch('http://localhost:5000/');
+      const response = await fetch(`${API_BASE_URL}/`, {
+        credentials: 'include'
+      });
       if (response.ok) {
         console.log('✅ Server is reachable');
         fetchCustomers();
@@ -183,64 +193,114 @@ const CustomersPage = () => {
   if (loading) {
     return (
       <PageContainer title="Customers" description="Manage your customers">
-        <DashboardCard title="">
-          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', p: 4 }}>
-            <CircularProgress />
-            <Typography sx={{ mt: 2 }}>Loading customers...</Typography>
+        <Box
+          sx={{
+            minHeight: '80vh',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            borderRadius: 3
+          }}
+        >
+          <Box sx={{ textAlign: 'center' }}>
+            <CircularProgress size={60} sx={{ color: 'white', mb: 3 }} />
+            <Typography variant="h5" sx={{ color: 'white', fontWeight: 600 }}>
+              Loading customers...
+            </Typography>
           </Box>
-        </DashboardCard>
+        </Box>
       </PageContainer>
     );
   }
 
   return (
     <PageContainer title="Customers" description="Manage your customers">
-      <DashboardCard title="">
-        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 3 }}>
-  <Typography 
-    variant="h4" 
-    component="h1" 
-    sx={{ 
-      fontWeight: 'bold',
-      textTransform: 'uppercase',
-      letterSpacing: 1,
-      mb: 2,
-      textAlign: 'center'
-    }}
-  >
-    CUSTOMERS
-  </Typography>
-  <Box sx={{ width: '100%', display: 'flex', justifyContent: 'flex-end' }}>
-    <Button
-      variant="contained"
-      startIcon={<AddIcon />}
-      onClick={handleAddCustomer}
-      sx={{
-        py: 1.5,
-        fontWeight: 600,
-        letterSpacing: 1,
-        fontSize: 18,
-        borderRadius: 2,
-        background: 'linear-gradient(90deg, #1976d2 60%, #64b5f6 100%)',
-        boxShadow: '0 2px 8px #90caf9',
-        transition: 'transform 0.18s, box-shadow 0.18s',
-        textTransform: 'none',
-        '&:hover': {
-          transform: 'scale(1.05)',
-          boxShadow: '0 4px 16px #90caf9',
-          background: 'linear-gradient(90deg, #1565c0 60%, #42a5f5 100%)'
-        }
-      }}
-    >
-      Add New Customer
-    </Button>
-  </Box>
-</Box>
+      <Box
+        sx={{
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          borderRadius: 3,
+          p: 4,
+          boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
+        }}
+      >
+        {/* Header Section */}
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 4 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <Box
+              sx={{
+                width: 60,
+                height: 60,
+                borderRadius: '50%',
+                background: 'rgba(255, 255, 255, 0.2)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                mr: 2
+              }}
+            >
+              <Typography sx={{ fontSize: 32 }}>👥</Typography>
+            </Box>
+            <Box>
+              <Typography
+                variant="h3"
+                sx={{
+                  color: 'white',
+                  fontWeight: 800,
+                  letterSpacing: 1,
+                  textTransform: 'uppercase'
+                }}
+              >
+                Customers
+              </Typography>
+              <Typography sx={{ color: 'rgba(255, 255, 255, 0.9)', fontSize: 16, mt: 0.5 }}>
+                📊 Manage and track your customer information
+              </Typography>
+              {/* Role-based access info */}
+              <Typography sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: 12, mt: 1 }}>
+                Access Level: {getUserDisplayInfo()?.role || 'Unknown'}
+              </Typography>
+            </Box>
+          </Box>
+          
+          {/* Permission-gated Add Customer button */}
+          <PermissionGate permission="customers">
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={handleAddCustomer}
+              sx={{
+                py: 1.5,
+                px: 3,
+                fontWeight: 700,
+                letterSpacing: 1,
+                fontSize: 16,
+                borderRadius: 2,
+                background: 'white',
+                color: '#667eea',
+                boxShadow: '0 4px 20px rgba(255, 255, 255, 0.3)',
+                transition: 'all 0.3s ease',
+                textTransform: 'none',
+                '&:hover': {
+                  transform: 'translateY(-2px)',
+                  boxShadow: '0 6px 25px rgba(255, 255, 255, 0.4)',
+                  background: 'white'
+              }
+            }}
+          >
+            New Customer
+          </Button>
+          </PermissionGate>
+        </Box>
 
         {error && (
-          <Alert 
-            severity="error" 
-            sx={{ mb: 3 }} 
+          <Alert
+            severity="error"
+            sx={{
+              mb: 3,
+              borderRadius: 2,
+              boxShadow: 2
+            }}
             onClose={() => setError('')}
             action={
               error.includes('server') || error.includes('connect') ? (
@@ -254,39 +314,65 @@ const CustomersPage = () => {
           </Alert>
         )}
 
-        <CustomersList
-          customers={customers}
-          onEdit={handleEditCustomer}
-          onArchive={handleArchiveCustomer} 
-        />
-
-        <Modal
-          open={openModal}
-          onClose={handleCloseModal}
-          aria-labelledby="customer-modal-title"
+        {/* Customers List in White Card */}
+        <Paper
+          sx={{
+            borderRadius: 3,
+            overflow: 'hidden',
+            boxShadow: '0 10px 40px rgba(0,0,0,0.2)'
+          }}
         >
-          <Paper
-            sx={{
-              position: 'absolute',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              width: { xs: '90%', sm: '800px' },
-              maxHeight: '90vh',
-              overflow: 'auto',
-              p: 4,
-            }}
-          >
-            <CustomerForm
-              customer={editingCustomer}
-              onSubmit={handleFormSubmit}
-              onCancel={handleCloseModal}
-            />
-          </Paper>
-        </Modal>
-      </DashboardCard>
+          <CustomersList
+            customers={customers}
+            onEdit={handleEditCustomer}
+            onArchive={handleArchiveCustomer}
+          />
+        </Paper>
+      </Box>
+
+      {/* Modal */}
+      <Modal
+        open={openModal}
+        onClose={handleCloseModal}
+        aria-labelledby="customer-modal-title"
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}
+      >
+        <Box
+          sx={{
+            width: { xs: '95%', sm: '90%', md: '850px' },
+            maxHeight: '95vh',
+            overflow: 'auto',
+            outline: 'none',
+            '&::-webkit-scrollbar': {
+              width: '8px'
+            },
+            '&::-webkit-scrollbar-track': {
+              background: '#f1f1f1',
+              borderRadius: '10px'
+            },
+            '&::-webkit-scrollbar-thumb': {
+              background: '#667eea',
+              borderRadius: '10px'
+            },
+            '&::-webkit-scrollbar-thumb:hover': {
+              background: '#764ba2'
+            }
+          }}
+        >
+          <CustomerForm
+            customer={editingCustomer}
+            onSubmit={handleFormSubmit}
+            onCancel={handleCloseModal}
+          />
+        </Box>
+      </Modal>
     </PageContainer>
   );
 };
 
-export default CustomersPage;
+// Protect the CustomersPage with role-based access control
+export default withRoleProtection(CustomersPage, 'customers');

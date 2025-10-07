@@ -27,6 +27,7 @@ import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import SearchIcon from '@mui/icons-material/Search';
 import ProductUpdateModal from './ProductUpdateModal';
+import { API_BASE_URL } from '../../config';
 
 const ProductList = () => {
   const [products, setProducts] = useState([]); // Start with empty array
@@ -45,27 +46,39 @@ const ProductList = () => {
   const [openRestore, setOpenRestore] = useState(false);
   const [statusFilter, setStatusFilter] = useState('active');
   const [success, setSuccess] = useState('');
-
+  const getImageUrl = (imagePath) => {
+    if (!imagePath) return '/images/products/placeholder.png';
+    
+    // Remove any duplicate /images/products/ prefix
+    const cleanPath = imagePath.replace(/^\/images\/products\//, '');
+     return `${API_BASE_URL}/images/products/${cleanPath}`;
+  };
   // Fetch products from backend
   const fetchProducts = async () => {
     try {
       setLoading(true);
       setError(null);
-      let url = 'http://localhost:5000/api/products/all';
+
+      let url = `${API_BASE_URL}/api/products/all`;
       if (statusFilter) {
         url += `?status=${encodeURIComponent(statusFilter)}`;
       }
-      const response = await fetch(url);
+
+      const response = await fetch(url, {
+        credentials: "include",
+      });
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
+
       const data = await response.json();
       if (data.success && Array.isArray(data.data)) {
         setProducts(data.data);
       } else if (Array.isArray(data)) {
         setProducts(data);
       } else {
-        setError('Invalid response format from server');
+        setError("Invalid response format from server");
         setProducts([]);
       }
     } catch (error) {
@@ -78,8 +91,11 @@ const ProductList = () => {
 
   useEffect(() => {
     fetchProducts();
+
     // Fetch all materials for joining
-    fetch('http://localhost:5000/api/material/all')
+    fetch(`${API_BASE_URL}/api/material/all`, {
+      credentials: "include",
+    })
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) {
@@ -110,27 +126,30 @@ const ProductList = () => {
   const handleMenuClick = async (event, product) => {
     setAnchorEl(event.currentTarget);
     setSelectedProduct(product);
-    // Fetch materials for the selected product and join with materialsList
-    if (product && product.product_id) {
+
+    if (product?.product_id) {
       try {
-        const res = await fetch(`http://localhost:5000/api/products/${product.product_id}/materials`);
+        const res = await fetch(
+          `${API_BASE_URL}/api/products/${product.product_id}/materials`,
+          { credentials: "include" }
+        );
         const data = await res.json();
+
         if (data.success && Array.isArray(data.data)) {
-          // Join with materialsList for full info
           const enriched = data.data.map(pm => {
             const mat = materialsList.find(m => m.material_id === pm.material_id);
             return {
               ...pm,
               material_name: mat ? mat.material_name : pm.material_name,
               unit_price: mat ? mat.unit_price : pm.unit_price,
-              unit: mat ? mat.unit : pm.unit
+              unit: mat ? mat.unit : pm.unit,
             };
           });
           setSelectedProductMaterials(enriched);
         } else {
           setSelectedProductMaterials([]);
         }
-      } catch (err) {
+      } catch {
         setSelectedProductMaterials([]);
       }
     } else {
@@ -156,18 +175,22 @@ const ProductList = () => {
   const confirmArchive = async () => {
     if (!selectedProduct) return;
     try {
-      const response = await fetch(`http://localhost:5000/api/products/${selectedProduct.product_id}/archive`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-      });
+      const response = await fetch(
+        `${API_BASE_URL}/api/products/${selectedProduct.product_id}/archive`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+        }
+      );
       if (response.ok) {
-        setSuccess('Product archived successfully');
+        setSuccess("Product archived successfully");
         fetchProducts();
       } else {
-        setSuccess('Failed to archive product');
+        setSuccess("Failed to archive product");
       }
-    } catch (error) {
-      setSuccess('Network error');
+    } catch {
+      setSuccess("Network error");
     }
     setOpenArchive(false);
     setSelectedProduct(null);
@@ -176,18 +199,22 @@ const ProductList = () => {
   const confirmRestore = async () => {
     if (!selectedProduct) return;
     try {
-      const response = await fetch(`http://localhost:5000/api/products/${selectedProduct.product_id}/restore`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-      });
+      const response = await fetch(
+        `${API_BASE_URL}/api/products/${selectedProduct.product_id}/restore`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+        }
+      );
       if (response.ok) {
-        setSuccess('Product restored successfully');
+        setSuccess("Product restored successfully");
         fetchProducts();
       } else {
-        setSuccess('Failed to restore product');
+        setSuccess("Failed to restore product");
       }
-    } catch (error) {
-      setSuccess('Network error');
+    } catch {
+      setSuccess("Network error");
     }
     setOpenRestore(false);
     setSelectedProduct(null);
@@ -213,6 +240,7 @@ const ProductList = () => {
     setSelectedProduct(null);  // Clear selected product
     setSelectedProductMaterials([]); // Clear materials
   };
+
 
   // Group products by category
   const categoryMap = {};
@@ -293,17 +321,9 @@ const ProductList = () => {
               {category}
             </Typography>
             <Grid container spacing={3}>
-              {categoryMap[category].map(prod => {
-                let imageUrl = '/images/products/placeholder.png';
-                if (prod.image_path) {
-                  if (prod.image_path.startsWith('/')) {
-                    imageUrl = `http://localhost:5000${prod.image_path}`;
-                  } else if (prod.image_path.match(/\.(png|jpg|jpeg|gif)$/i)) {
-                    imageUrl = `http://localhost:5000/images/products/${prod.image_path}`;
-                  } else {
-                    imageUrl = '/images/products/placeholder.png';
-                  }
-                }
+                {categoryMap[category].map(prod => {
+                const imageUrl = getImageUrl(prod.image_path);
+            
                 return (
                   <Grid item xs={12} sm={6} md={4} lg={3} key={prod.product_id}>
                     <Card
@@ -356,7 +376,9 @@ const ProductList = () => {
                           variant="square"
                           src={imageUrl}
                           sx={{ width: 64, height: 64, borderRadius: 2, boxShadow: 1 }}
-                          onError={(e) => { e.target.src = '/images/products/placeholder.png'; }}
+                          onError={(e) => { 
+                            e.target.src = '/images/products/placeholder.png'; 
+                          }}
                         />
                       </Box>
                       {/* Product name below image */}

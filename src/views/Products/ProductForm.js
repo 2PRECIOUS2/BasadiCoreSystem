@@ -13,6 +13,7 @@ import {
 } from '@mui/material';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline'; // For the '+' icon
 import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline'; // To remove a material line
+import { API_BASE_URL } from 'src/config';
 
 const ProductForm = () => {
   const [productDetails, setProductDetails] = useState({
@@ -51,11 +52,13 @@ const ProductForm = () => {
 
   // --- Fetch Materials from Database ---
   useEffect(() => {
-    fetch('http://localhost:5000/api/material/all') // Assuming this endpoint works
-      .then(res => res.json())
-      .then(data => setMaterialsList(data))
-      .catch(error => console.error('Error fetching materials for ProductForm:', error));
-  }, []);
+  fetch(`${API_BASE_URL}/api/material/all`, {
+    credentials: "include",
+  })
+    .then(res => res.json())
+    .then(data => setMaterialsList(data))
+    .catch(error => console.error("Error fetching materials for ProductForm:", error));
+}, []);
 
   // --- Handlers for Product Details ---
   const handleProductDetailsChange = (e) => {
@@ -160,10 +163,11 @@ const prepareMaterialsForSubmission = () => {
   }
 
   try {
-    const response = await fetch('http://localhost:5000/api/products/add', {
-      method: 'POST',
-      body: formData,
-    });
+  const response = await fetch(`${API_BASE_URL}/api/products/add`, {
+    method: "POST",
+    body: formData, // assuming this is FormData for file upload
+    credentials: "include",
+  });
 
     if (response.ok) {
       setMessage({ type: 'success', text: 'Product added successfully!' });

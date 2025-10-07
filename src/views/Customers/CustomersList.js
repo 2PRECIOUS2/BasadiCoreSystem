@@ -34,6 +34,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import ArchiveIcon from '@mui/icons-material/Archive';
 import InfoIcon from '@mui/icons-material/Info';
 import CustomerProfile from './CustomerProfile';
+import { API_BASE_URL } from '../../config';
 
 const CustomersList = ({ customers, onEdit, onArchive }) => {
   const [anchorEl, setAnchorEl] = useState(null);
@@ -135,9 +136,10 @@ const CustomersList = ({ customers, onEdit, onArchive }) => {
   const confirmRestore = async () => {
     if (!selectedCustomer) return;
     try {
-      const response = await fetch(`http://localhost:5000/api/customers/${selectedCustomer.customerNumber || selectedCustomer.id}/restore`, {
+      const response = await fetch(`${API_BASE_URL}/api/customers/${selectedCustomer.customerNumber || selectedCustomer.id}/restore`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
       });
       if (response.ok) {
         setSuccess('Customer restored successfully!');
