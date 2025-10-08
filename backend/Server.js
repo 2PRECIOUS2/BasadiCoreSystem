@@ -1,72 +1,251 @@
-require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
-const https = require('https');
+import 'dotenv/config';
+import express from 'express';
+import cors from 'cors';
+import session from 'express-session';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import dbModule from './db/index.js';
 
-// --- Import the CENTRALIZED database module ---
-const db = require('./db'); // This imports the `module.exports` from backend/db/index.js
+// Routes imports
+import loginRoutes from './routes/Login.js';
+import registerRoutes from './routes/register.js';
+import approvalRoutes from './routes/approvalRoutes.js';
+// import { sessionTimeout } from './middlewares/sessionTimeout.js'; // COMMENTED OUT - causing random logouts
+import projectsRouter from './routes/projects.js';
+import employeesRoutes from './routes/employess.js';
+import materialRoutes from './routes/materials.js';
+import productsRoutes from './routes/products.js';
+import stockRoutes from './routes/stock.js';
+import customersRoutes from './routes/customers.js';
+import orderInvoiceRouter from './routes/OrderInvoice.js';
+import ordersRouter from './routes/orders.js';
+import serviceProviderRoutes from './routes/serviceProvider.js';
+import timesheetRoutes from './routes/Timesheet.js';
+import productionRouter from './routes/production.js';
+import orderStatusUpdate from './cron/orderStatusUpdate.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const port = process.env.PORT || 5000;
 
+// Trust proxy for production deployment
+app.set('trust proxy', 1);
 
+// CORS configuration - MUST specify exact origin when using credentials
+const corsOptions = {
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  optionsSuccessStatus: 200 // For legacy browser support
+};
+app.use(cors(corsOptions));
 
-// Middleware
-app.use(cors());
 app.use(express.json());
 
-// --- Registering Routes ---
-const approvalRoutes = require('./routes/approvalRoutes');
-app.use('/api/approval', approvalRoutes);
+// Session configuration
+// Replace the session configuration section with this unified approach:
 
+// Session configuration - 20 minute timeout
+app.use(session({
+    secret: process.env.SESSION_SECRET || 'your-super-secret-key-here-basadi-2024',
+    resave: false,
+    saveUninitialized: false,
+    name: 'basadi.session',
+    cookie: {
+        secure: false, // Set to true in production with HTTPS
+        httpOnly: true,
+        maxAge: 20 * 60 * 1000, // 20 minutes in milliseconds
+        sameSite: 'lax'
+    },
+    rolling: true // Reset expiration on each request
+}));
 
-// The materialRoutes now expects the 'pool' to be passed to it as a function argument.
-const materialRoutes = require('./routes/materials');
-app.use('/api/material', materialRoutes(db.pool)); // Pass the db.pool to the router factory function
-
-const stockRoutes = require('./routes/stock');
-app.use('/api/stock', stockRoutes(db.pool));
-
-const productsRoutes = require('./routes/products');
-const path = require('path');
-app.use('/api/products', productsRoutes);
-app.use('/images/products', express.static(path.join(__dirname, '../public/images/products')));
-app.use('/images', express.static(path.join(__dirname, '../public/images')));
-
-
-// User Registration Route - Using `db.pool.connect()`
-app.post('/api/register', async (req, res) => {
-  // ... (your existing registration logic) ...
-  let client;
-  try {
-    client = await db.pool.connect(); // Access the pool from the imported `db` object
-    // ... rest of your registration query using 'client' ...
-  } catch (error) {
-    // ...
-  } finally {
-    if (client) {
-      client.release();
-    }
+// Update the requireLogin middleware to use 20-minute timeout
+function requireLogin(req, res, next) {
+  // Allow login and register routes without session
+  if (
+    req.path.startsWith('/api/login') ||
+    req.path.startsWith('/api/register') ||
+    req.path === '/' ||
+    req.path.startsWith('/images') ||
+    req.path === '/api/check-session'
+  ) {
+    return next();
   }
+  
+  if (!req.session.user) {
+    return res.status(401).json({ 
+      message: 'Session expired or not logged in. Please login.',
+      code: 'NO_SESSION'
+    });
+  }
+  
+  // Check last activity - 20 minutes timeout
+  const now = Date.now();
+  const TWENTY_MINUTES = 20 * 60 * 1000;
+  
+  if (req.session.lastActivity && now - req.session.lastActivity > TWENTY_MINUTES) {
+    req.session.destroy(() => {
+      return res.status(401).json({ 
+        message: 'Session timed out after 20 minutes of inactivity. Please login again.',
+        code: 'SESSION_TIMEOUT'
+      });
+    });
+    return;
+  }
+  
+  req.session.lastActivity = now;
+  next();
+}
+
+// Update the check-session route to use 20-minute timeout
+app.get('/api/check-session', (req, res) => {
+    if (!req.session?.user) {
+        return res.status(401).json({ 
+            active: false, 
+            message: 'No active session' 
+        });
+    }
+
+    // Check if session is expired (20 minutes of inactivity)
+    const TWENTY_MINUTES = 20 * 60 * 1000;
+    const now = Date.now();
+    const lastActivity = req.session.lastActivity || now;
+    const inactiveDuration = now - lastActivity;
+
+    if (inactiveDuration > TWENTY_MINUTES) {
+        req.session.destroy((err) => {
+            if (err) console.error('Session destroy error:', err);
+        });
+        return res.status(440).json({ 
+            active: false, 
+            message: 'Session expired due to 20 minutes of inactivity' 
+        });
+    }
+
+    // Update last activity
+    req.session.lastActivity = now;
+
+    res.json({ 
+        active: true, 
+        user: req.session.user,
+        lastActivity: req.session.lastActivity 
+    });
 });
 
-// Admin Approval Route - Using `db.pool.connect()`
-app.get('/api/approve-user', async (req, res) => {
-  // ... (your existing approval logic) ...
-  let client;
-  try {
-    client = await db.pool.connect(); // Access the pool from the imported `db` object
-    // ... rest of your approval query using 'client' ...
-  } catch (error) {
-    // ...
-  } finally {
-    if (client) {
-      client.release();
+app.use(requireLogin);
+
+// ---------------------- Routes ----------------------
+app.use('/api/login', loginRoutes(dbModule.pool));
+app.use('/api/register', registerRoutes(dbModule.pool));
+app.use('/api/approval', approvalRoutes);
+app.use('/api/production', productionRouter(dbModule.pool));
+app.use('/api/service-providers', serviceProviderRoutes(dbModule.pool));
+app.use('/api/material', materialRoutes(dbModule.pool));
+app.use('/api/stock', stockRoutes(dbModule.pool));
+app.use('/api/products', productsRoutes(dbModule.pool));
+app.use('/api/customers', customersRoutes(dbModule.pool));
+app.use('/api/order-invoice', orderInvoiceRouter(dbModule.pool));
+
+app.use('/api/order-invoice', orderInvoiceRouter(dbModule.pool));
+app.use('/api/orders', ordersRouter(dbModule.pool));
+app.use('/api/employees', employeesRoutes(dbModule.pool));
+app.use('/api/projects', projectsRouter(dbModule.pool));
+app.use('/api/timesheets', timesheetRoutes(dbModule.pool));
+
+// ---------------------- Session Management ----------------------
+// Session checker route (frontend uses this to verify session)
+app.get('/api/check-session', (req, res) => {
+    // Check if session exists and has user
+    if (!req.session.user) {
+        return res.status(401).json({ 
+            active: false, 
+            message: 'No active session' 
+        });
     }
-  }
+
+    // Check if session is expired (5 minutes of inactivity)
+    const MAX_INACTIVE_TIME = 5 * 60 * 1000; // 5 minutes
+    const now = Date.now();
+    const lastActivity = req.session.lastActivity || now;
+    const inactiveDuration = now - lastActivity;
+
+    if (inactiveDuration > MAX_INACTIVE_TIME) {
+        // Session expired, destroy it
+        req.session.destroy((err) => {
+            if (err) console.error('Session destroy error:', err);
+        });
+        return res.status(440).json({ 
+            active: false, 
+            message: 'Session expired due to inactivity' 
+        });
+    }
+
+    // Update last activity
+    req.session.lastActivity = now;
+
+    // Session is valid
+    res.json({ 
+        active: true, 
+        user: req.session.user,
+        lastActivity: req.session.lastActivity 
+    });
+});
+
+// Logout route
+app.post('/api/logout', (req, res) => {
+    req.session.destroy((err) => {
+        if (err) {
+            console.error('Logout error:', err);
+            return res.status(500).json({ message: 'Failed to logout' });
+        }
+        res.clearCookie('basadi.sid');
+        res.json({ message: 'Logged out successfully' });
+    });
+});
+
+// ---------------------- Static files ----------------------
+// Serve images from the public directory
+app.use('/images', express.static(path.join(__dirname, 'public/images')));
+
+// ---------------------- Cron jobs ----------------------
+orderStatusUpdate(dbModule.pool);
+
+// Basic test route
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'BasadiCore Backend API is running!', 
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
+// Debug session route
+app.get('/api/session-check', (req, res) => {
+  res.json({
+    hasSession: !!req.session.user,
+    sessionId: req.sessionID,
+    user: req.session.user || null,
+    lastActivity: req.session.lastActivity || null,
+    cookies: req.headers.cookie || 'No cookies',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error('Error:', err);
+  res.status(500).json({ 
+    message: 'Internal server error',
+    error: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
+  });
 });
 
 // Start the server
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
+  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 });

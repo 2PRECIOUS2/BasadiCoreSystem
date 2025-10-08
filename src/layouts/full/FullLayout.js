@@ -19,7 +19,7 @@ const PageWrapper = styled("div")(() => ({
   backgroundColor: "transparent",
 }));
 
-const FullLayout = () => {
+const FullLayout = ({ mode, setMode }) => {
   const [isSidebarOpen, setSidebarOpen] = useState(true);
   const [isMobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   // const lgUp = useMediaQuery((theme) => theme.breakpoints.up("lg"));
@@ -33,6 +33,8 @@ const FullLayout = () => {
         isSidebarOpen={isSidebarOpen}
         isMobileSidebarOpen={isMobileSidebarOpen}
         onSidebarClose={() => setMobileSidebarOpen(false)}
+        mode={mode}
+        setMode={setMode}
       />
       {/* ------------------------------------------- */}
       {/* Main Wrapper */}

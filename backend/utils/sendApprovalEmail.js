@@ -1,5 +1,5 @@
 // filepath: backend/utils/sendApprovalEmail.js
-const nodemailer = require('nodemailer');
+import nodemailer from 'nodemailer';
 
 // You can load your email template here if you want
 const transporter = nodemailer.createTransport({
@@ -28,4 +28,4 @@ async function sendApprovalEmail(to, name, staffId) {
   });
 }
 
-module.exports = sendApprovalEmail;
+export default sendApprovalEmail;

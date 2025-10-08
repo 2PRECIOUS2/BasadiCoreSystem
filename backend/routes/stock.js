@@ -1,10 +1,10 @@
 // backend/routes/stock.js
-const express = require('express');
+import express from 'express';
 const router = express.Router(); // Initialize the router here
 
-const { v4: uuidv4 } = require('uuid'); // If you use uuidv4 here directly
-const PDFDocument = require('pdfkit'); // Moved here
-const fs = require('fs'); // Moved here
+import { v4 as uuidv4 } from 'uuid'; // If you use uuidv4 here directly
+import PDFDocument from 'pdfkit'; // Moved here
+import fs from 'fs'; // Moved here
 
 // Helper to generate invoice number
 const generateInvoiceNumber = () => {
@@ -15,7 +15,7 @@ const generateInvoiceNumber = () => {
 };
 
 // The main export is a function that takes the pool
-module.exports = (pool) => {
+const stockRoutes = (pool) => {
     // All route definitions for this router go inside this function
 
     router.post('/add', async (req, res) => {
@@ -57,7 +57,7 @@ module.exports = (pool) => {
                     SET quantity = quantity + $1,
                         unit_price = $2,
                         updated_at = NOW()
-                    WHERE id = $3`,
+                    WHERE material_id = $3`,
                     [parsedQuantity, parsedUnitPrice, item.material_id]
                 );
             }
@@ -89,7 +89,7 @@ module.exports = (pool) => {
 
             const itemsRes = await client.query(
                 `SELECT m.material_name, i.* FROM material_stock_items i
-                JOIN materials m ON i.material_id = m.id
+                JOIN materials m ON i.material_id = m.material_id
                 WHERE i.stock_id = $1`,
                 [invoice.id]
             );
@@ -138,3 +138,5 @@ module.exports = (pool) => {
 
     return router; // <-- DON'T FORGET TO RETURN THE ROUTER!
 };
+
+export default stockRoutes;

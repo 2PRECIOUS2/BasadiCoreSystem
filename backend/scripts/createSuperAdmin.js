@@ -10,15 +10,18 @@ const pool = new Pool({
   port: process.env.DB_PORT || 5432,
 });
 
+
 (async () => {
   try {
+    const firstName = 'Basadi'; // Set your super admin's first name
+    const lastName = 'Core';    // Set your super admin's last name
     const plainPassword = 'BasadiCoreSystem@2025Since2010'; // CHANGE THIS before running!
     const hashedPassword = await bcrypt.hash(plainPassword, 10);
 
     const result = await pool.query(
-      `INSERT INTO users (id, name, email, password, role, status, registration_date)
-       VALUES (gen_random_uuid(), $1, $2, $3, $4, 'active', NOW()) RETURNING *`,
-      ['CEO Super Admin', 'basadicor@gmail.com', hashedPassword, 'super_admin']
+      `INSERT INTO users (id, first_name, last_name, email, password, role, status, registration_date)
+       VALUES (gen_random_uuid(), $1, $2, $3, $4, 'superadmin', 'approved', NOW()) RETURNING *`,
+      [firstName, lastName, 'basadicore@gmail.com', hashedPassword]
     );
 
     console.log('Super admin created:', result.rows[0]);

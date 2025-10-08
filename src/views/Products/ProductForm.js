@@ -13,16 +13,18 @@ import {
 } from '@mui/material';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline'; // For the '+' icon
 import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline'; // To remove a material line
+import { API_BASE_URL } from 'src/config';
 
 const ProductForm = () => {
   const [productDetails, setProductDetails] = useState({
     product_name: '',
+    quantity: 0,
     selling_price: 0,
     category: '', // New state for category
   });
   const [materialsList, setMaterialsList] = useState([]); // List of materials from the DB
   const [productMaterials, setProductMaterials] = useState([ // State for materials used in THIS product
-    { materialId: '', measurement: '', saved: false } // Each object represents one material line
+    { materialId: '', measurement: '', unit: '', saved: false } // Each object represents one material line
   ]);
   const [costOfProduction, setCostOfProduction] = useState(0); // This will initially be 0
 
@@ -50,11 +52,13 @@ const ProductForm = () => {
 
   // --- Fetch Materials from Database ---
   useEffect(() => {
-    fetch('http://localhost:5000/api/material/all') // Assuming this endpoint works
-      .then(res => res.json())
-      .then(data => setMaterialsList(data))
-      .catch(error => console.error('Error fetching materials for ProductForm:', error));
-  }, []);
+  fetch(`${API_BASE_URL}/api/material/all`, {
+    credentials: "include",
+  })
+    .then(res => res.json())
+    .then(data => setMaterialsList(data))
+    .catch(error => console.error("Error fetching materials for ProductForm:", error));
+}, []);
 
   // --- Handlers for Product Details ---
   const handleProductDetailsChange = (e) => {
@@ -67,6 +71,14 @@ const ProductForm = () => {
     const { name, value } = event.target;
     const list = [...productMaterials];
     list[index][name] = value;
+
+      // When material changes, also capture its unit
+  if (name === 'materialId') {
+    const selectedMaterial = materialsList.find(m => m.material_id === value);
+    if (selectedMaterial) {
+      list[index].unit = selectedMaterial.unit;
+    }
+  }
     // Reset saved status if measurement changes for that line
     if (name === 'measurement' || name === 'materialId') {
       list[index].saved = false;
@@ -75,7 +87,7 @@ const ProductForm = () => {
   };
 
   const handleAddMaterialLine = () => {
-    setProductMaterials([...productMaterials, { materialId: '', measurement: '', saved: false }]);
+    setProductMaterials([...productMaterials, { materialId: '', measurement: '', unit: '', saved: false }]);
   };
 
   const handleRemoveMaterialLine = (index) => {
@@ -106,7 +118,7 @@ const calculateCostOfProduction = () => {
   let total = 0;
   productMaterials.forEach(line => {
     if (line.materialId && line.measurement > 0) {
-      const mat = materialsList.find(m => m.id === line.materialId);
+      const mat = materialsList.find(m => m.material_id === line.materialId);
       if (mat && mat.unit_price) {
         total += parseFloat(mat.unit_price) * parseFloat(line.measurement);
       }
@@ -121,31 +133,51 @@ useEffect(() => {
   // eslint-disable-next-line
 }, [productMaterials, materialsList]);
 
+const prepareMaterialsForSubmission = () => {
+  return productMaterials
+    .filter(mat => mat.materialId && mat.measurement)
+    .map(mat => {
+      const selectedMaterial = materialsList.find(m => m.material_id === mat.materialId);
+      return {
+        materialId: mat.materialId,
+        measurement: parseFloat(mat.measurement),
+        unit: selectedMaterial ? selectedMaterial.unit : ''
+      };
+    });
+};
 
   // --- Main Form Submission ---
   const handleAddProductSubmit = async (e) => {
   e.preventDefault();
 
-  const formData = new FormData();
+ const formData = new FormData();
   formData.append('product_name', productDetails.product_name);
   formData.append('category', productDetails.category);
   formData.append('cost_of_production', costOfProduction);
   formData.append('selling_price', productDetails.selling_price);
-  if (image) formData.append('image', image);
-  formData.append('materials', JSON.stringify(productMaterials));
+  formData.append('quantity', productDetails.quantity || 0);
+  formData.append('materials', JSON.stringify(prepareMaterialsForSubmission()));
+  
+  if (image) {
+    formData.append('image', image);
+  }
 
   try {
-    const response = await fetch('http://localhost:5000/api/products/add', {
-      method: 'POST',
-      body: formData,
-    });
+  const response = await fetch(`${API_BASE_URL}/api/products/add`, {
+    method: "POST",
+    body: formData, // assuming this is FormData for file upload
+    credentials: "include",
+  });
 
     if (response.ok) {
       setMessage({ type: 'success', text: 'Product added successfully!' });
-      setProductDetails({ product_name: '', selling_price: 0, category: '' });
-      setProductMaterials([{ materialId: '', measurement: '', saved: false }]);
+      setProductDetails({ product_name: '', selling_price: 0, category: '', quantity: 0 });
+      setProductMaterials([{ materialId: '', measurement: '', unit: '', saved: false }]);
       setCostOfProduction(0);
       setImage(null);
+    //if (onProductAdded) {
+          //onProductAdded(); // Call parent function to refresh products
+   // }
     } else {
       setMessage({ type: 'error', text: 'Failed to add product.' });
     }
@@ -206,7 +238,7 @@ useEffect(() => {
                 >
                   {materialsList.length > 0 ? (
                     materialsList.map((mat) => (
-                      <MenuItem key={mat.id} value={mat.id}>
+                      <MenuItem key={mat.material_id} value={mat.material_id}>
                         {mat.material_name} ({mat.unit})
                       </MenuItem>
                     ))
@@ -223,8 +255,20 @@ useEffect(() => {
                   value={singleMaterial.measurement}
                   onChange={(e) => handleMaterialLineChange(index, e)}
                   inputProps={{ min: 0, step: "any" }}
-                  sx={{ width: 150, ...commonInputSx }} // Increased width for measurement
+                  sx={{ width: 180, ...commonInputSx }} // Increased width for measurement
                   required
+                />
+
+                  {/* Unit Input - Auto-filled and readonly */}
+                <TextField
+                  label="Unit"
+                  name="unit"
+                  value={singleMaterial.unit}
+                  sx={{ width: 100, ...commonInputSx }}
+                  InputProps={{
+                    readOnly: true,
+                  }}
+                  disabled
                 />
 
                 {/* Save Button for Material Line */}
@@ -262,6 +306,20 @@ useEffect(() => {
           </CardContent>
         </Card>
 
+        
+        {/* Quantity (for clarity) */}
+        <TextField
+          label="Quantity (Initial stock - will change when products are made)"
+          name="quantity"
+          type="number"
+          fullWidth
+          disabled
+          value={productDetails.quantity}
+          onChange={handleProductDetailsChange}
+          inputProps={{ min: 0, step: "1" }}
+       
+        />
+
         {/* Cost of Production */}
         <Box sx={{ border: '1px solid #ccc', p: 2, borderRadius: '4px', mt: 2 }}>
           <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
@@ -283,10 +341,10 @@ useEffect(() => {
           sx={commonInputSx}
         />
 
-        <input
+        <TextField
           type="file"
-          accept="image/*"
-          onChange={e => setImage(e.target.files[0])}
+          onChange={(e) => setImage(e.target.files[0])}
+           inputProps={{ accept: 'image/*' }}
         />
 
         {message && <Alert severity={message.type}>{message.text}</Alert>}

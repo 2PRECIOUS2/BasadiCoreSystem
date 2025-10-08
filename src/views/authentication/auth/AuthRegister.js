@@ -18,26 +18,28 @@ import { Stack } from '@mui/system';
 
 import CustomTextField from '../../../components/forms/theme-elements/CustomTextField';
 
-// REMOVE THESE LINES (EmailJS credentials are now in backend .env):
-// const EMAILJS_SERVICE_ID = 'service_606h56n';
-// const EMAILJS_TEMPLATE_ID_ADMIN_APPROVAL = 'template_f9qzd4t';
-// const EMAILJS_PUBLIC_KEY = '_KXTVKQB3jXW1zqOh';
+// RE
 
 const AuthRegister = ({ title, subtitle, subtext }) => {
-  const [name, setName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(null);
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/;
+
+const [emailError, setEmailError] = useState('');
+const [passwordError, setPasswordError] = useState('');
+
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-
-    setLoading(true);
     setMessage(null);
 
-    if (!name || !email || !password || !role) {
+    if (!firstName || !lastName || !email || !password || !role) {
       setMessage({ type: 'error', text: 'Please fill in all fields and select a role.' });
       setLoading(false);
       return;
@@ -50,7 +52,7 @@ const AuthRegister = ({ title, subtitle, subtext }) => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ name, email, password, role }),
+        body: JSON.stringify({ firstName, lastName, email, password, role }),
       });
 
       const data = await response.json();
@@ -61,7 +63,8 @@ const AuthRegister = ({ title, subtitle, subtext }) => {
           text: data.message, // Message from backend
         });
         // Clear form only on successful submission
-        setName('');
+        setFirstName('');
+        setLastName('');
         setEmail('');
         setPassword('');
         setRole('');
@@ -89,15 +92,26 @@ const AuthRegister = ({ title, subtitle, subtext }) => {
 
       <Box component="form" onSubmit={handleSubmit}>
         <Stack mb={3}>
-          <Typography variant="subtitle1" fontWeight={600} component="label" htmlFor="name" mb="5px">
-            Name
+          <Typography variant="subtitle1" fontWeight={600} component="label" htmlFor="firstName" mb="5px">
+            First Name
           </Typography>
           <CustomTextField
-            id="name"
+            id="firstName"
             variant="outlined"
             fullWidth
-            value={name}
-            onChange={(e) => setName(e.target.value)}
+            value={firstName}
+            onChange={(e) => setFirstName(e.target.value)}
+          />
+
+          <Typography variant="subtitle1" fontWeight={600} component="label" htmlFor="lastName" mb="5px" mt="25px">
+            Last Name
+          </Typography>
+          <CustomTextField
+            id="lastName"
+            variant="outlined"
+            fullWidth
+            value={lastName}
+            onChange={(e) => setLastName(e.target.value)}
           />
 
           <Typography variant="subtitle1" fontWeight={600} component="label" htmlFor="email" mb="5px" mt="25px">
@@ -139,7 +153,10 @@ const AuthRegister = ({ title, subtitle, subtext }) => {
                 <em>None</em>
               </MenuItem>
               <MenuItem value="admin">Admin</MenuItem>
-              <MenuItem value="accountant">Accountant</MenuItem>
+                <MenuItem value="accountant">Accountant</MenuItem>
+                <MenuItem value="trainer">Trainer</MenuItem>
+                <MenuItem value="supporter">Supporter</MenuItem>
+
             </Select>
           </FormControl>
         </Stack>

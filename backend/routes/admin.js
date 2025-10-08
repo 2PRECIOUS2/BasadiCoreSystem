@@ -1,8 +1,8 @@
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const nodemailer = require('nodemailer');
+import nodemailer from 'nodemailer';
 
-module.exports = (pool) => {
+const adminRoutes = (pool) => {
 
   router.post('/approve/:userId', async (req, res) => {
     const { userId } = req.params;
@@ -72,6 +72,8 @@ module.exports = (pool) => {
   return router;
 };
 
+export default adminRoutes;
+
 // Email sending utility using Nodemailer
 const transporter = nodemailer.createTransport({
   service: 'gmail',  // or another SMTP
@@ -85,3 +87,4 @@ const sendEmail = async (to, subject, html) => {
 // Templates
 const approvalTemplate = (name, staffId) => `...`;  // Insert approval HTML template here
 const rejectionTemplate = (name) => `...`;         // Insert rejection HTML template here
+

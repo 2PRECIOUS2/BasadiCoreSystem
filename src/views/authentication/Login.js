@@ -1,14 +1,14 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Grid, Box, Card, Stack, Typography } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
 
 // components
 import PageContainer from 'src/components/container/PageContainer';
 import Logo from 'src/layouts/full/shared/logo/Logo';
 import AuthLogin from './auth/AuthLogin';
 
-const Login2 = () => {
-  
+const Login2 = ({ setIsAuthenticated, setUser }) => {  // Add props here
   return (
     <PageContainer title="Login" description="this is Login page">
       <Box
@@ -41,31 +41,37 @@ const Login2 = () => {
               <Box display="flex" alignItems="center" justifyContent="center">
                 <Logo />
               </Box>
-              <AuthLogin
-                subtext={
-                  <Typography variant="subtitle1" textAlign="center" color="textSecondary" mb={1}>
-                     Empower Women. Buy Local.
+            <AuthLogin
+              setIsAuthenticated={setIsAuthenticated}  // Pass props down
+              setUser={setUser}  // Pass props down
+              subtext={
+                <Typography variant="subtitle1" textAlign="center" color="textSecondary" mb={1}>
+                  Empower Women. Buy Local.
+                </Typography>
+              }
+              subtitle={
+                <Stack direction="row" spacing={1} justifyContent="center" mt={3}>
+                  <Typography color="textSecondary" variant="body1" fontWeight="500">
+                    New to BasadiCore?
                   </Typography>
-                }
-                subtitle={
-                  <Stack direction="row" spacing={1} justifyContent="center" mt={3}>
-                    <Typography color="textSecondary" variant="h6" fontWeight="500">
-                      New to BasadiCore?
-                    </Typography>
-                    <Typography
-                      component={Link}
-                      to="/auth/register"
-                      fontWeight="500"
-                      sx={{
-                        textDecoration: 'none',
-                        color: 'primary.main',
-                      }}
-                    >
-                      Request to be an admin
-                    </Typography>
-                  </Stack>
-                }
-              />
+                  <Typography
+                    component={Link}
+                    to="/auth/register"
+                    variant="body1"
+                    fontWeight="500"
+                    sx={{
+                      textDecoration: 'none',
+                      color: 'primary.main',
+                      ml: 1,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Request Access
+                  </Typography>
+                </Stack>
+              }
+            />
+
             </Card>
           </Grid>
         </Grid>
