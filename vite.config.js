@@ -54,5 +54,14 @@ export default defineConfig({
         outDir: 'build',
         sourcemap: false,
         chunkSizeWarningLimit: 2400,
+        rollupOptions: {
+            onwarn(warning, warn) {
+                const message = typeof warning.message === 'string' ? warning.message : '';
+                if (warning.code === 'SOURCEMAP_ERROR' || message.includes('sourcemap')) {
+                    return;
+                }
+                warn(warning);
+            },
+        },
     }
 });
