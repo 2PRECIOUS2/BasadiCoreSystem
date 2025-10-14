@@ -1,0 +1,1 @@
+import{w as n}from"./index-7f2a5a5c.js";const u=({permission:r,children:s,fallback:e=null,requireAll:f=!1,requireAny:a=!1})=>{if(r&&typeof r=="string")return n(r)?s:e;if(r&&Array.isArray(r)){if(f){if(r.every(t=>n(t)))return s}else if(a&&r.some(t=>n(t)))return s;return e}return e};export{u as P};
