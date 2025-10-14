@@ -66,17 +66,13 @@ app.use(session({
 
 // Update the requireLogin middleware to use 20-minute timeout
 function requireLogin(req, res, next) {
-  const pathOnly = req.path || '';
   // Allow login and register routes without session
   if (
-    req.method === 'OPTIONS' ||
-    pathOnly === '/' ||
-    pathOnly.startsWith('/images') ||
-    pathOnly === '/login' ||
-    pathOnly === '/register' ||
-    pathOnly === '/check-session' ||
-    pathOnly === '/session-check' ||
-    pathOnly === '/health'
+    req.path.startsWith('/api/login') ||
+    req.path.startsWith('/api/register') ||
+    req.path === '/' ||
+    req.path.startsWith('/images') ||
+    req.path === '/api/check-session'
   ) {
     return next();
   }
@@ -141,7 +137,7 @@ app.get('/api/check-session', (req, res) => {
     });
 });
 
-app.use('/api', requireLogin);
+app.use(requireLogin);
 
 // ---------------------- Routes ----------------------
 app.use('/api/login', loginRoutes(dbModule.pool));
@@ -217,19 +213,11 @@ app.post('/api/logout', (req, res) => {
 // Serve images from the public directory
 app.use('/images', express.static(path.join(__dirname, 'public/images')));
 
-const clientBuildPath = path.resolve(__dirname, '../build');
-app.use(express.static(clientBuildPath));
-
-app.get('*', (req, res, next) => {
-  if (req.path.startsWith('/api')) return next();
-  res.sendFile(path.join(clientBuildPath, 'index.html'));
-});
-
 // ---------------------- Cron jobs ----------------------
 orderStatusUpdate(dbModule.pool);
 
 // Basic test route
-app.get('/api/health', (req, res) => {
+app.get('/', (req, res) => {
   res.json({ 
     message: 'BasadiCore Backend API is running!', 
     timestamp: new Date().toISOString(),
