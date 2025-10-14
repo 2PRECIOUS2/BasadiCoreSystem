@@ -66,13 +66,17 @@ app.use(session({
 
 // Update the requireLogin middleware to use 20-minute timeout
 function requireLogin(req, res, next) {
+  const pathOnly = req.path || '';
   // Allow login and register routes without session
   if (
-    req.path.startsWith('/api/login') ||
-    req.path.startsWith('/api/register') ||
-    req.path === '/' ||
-    req.path.startsWith('/images') ||
-    req.path === '/api/check-session'
+    req.method === 'OPTIONS' ||
+    pathOnly === '/' ||
+    pathOnly.startsWith('/images') ||
+    pathOnly === '/login' ||
+    pathOnly === '/register' ||
+    pathOnly === '/check-session' ||
+    pathOnly === '/session-check' ||
+    pathOnly === '/health'
   ) {
     return next();
   }
@@ -218,7 +222,7 @@ app.use(express.static(clientBuildPath));
 
 app.get('*', (req, res, next) => {
   if (req.path.startsWith('/api')) return next();
-  req.sendFile(path.join(clientBuildPath, 'index.html'));
+  res.sendFile(path.join(clientBuildPath, 'index.html'));
 });
 
 // ---------------------- Cron jobs ----------------------
