@@ -51,6 +51,8 @@ export default defineConfig({
     plugins: [svgr(), react()],
     base: '/',
     build: {
-        outDir: 'build'
+        outDir: 'build',
+        sourcemap: false,
+        chunkSizeWarningLimit: 2400,
         }
 });
