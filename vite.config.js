@@ -49,5 +49,8 @@ export default defineConfig({
     // })],
 
     plugins: [svgr(), react()],
-    base: '/'
+    base: '/',
+    build: {
+        outDir: 'build'
+        }
 });
