@@ -49,5 +49,8 @@ export default defineConfig({
     // })],
 
     plugins: [svgr(), react()],
-    base: '/Basadi-Core/'
+    base: '/',
+    build: {
+        outDir: 'build'
+    }
 });
