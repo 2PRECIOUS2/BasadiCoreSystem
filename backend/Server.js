@@ -218,7 +218,7 @@ app.use(express.static(clientBuildPath));
 
 app.get('*', (req, res, next) => {
   if (req.path.startsWith('/api')) return next();
-  req.sendFile(path.join(clientBuildPath, 'index.html'));
+  res.sendFile(path.join(clientBuildPath, 'index.html'));
 });
 
 // ---------------------- Cron jobs ----------------------
