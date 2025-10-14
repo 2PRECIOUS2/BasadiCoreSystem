@@ -26,6 +26,7 @@ const ProductPage = () => {
   const [openAddProductDialog, setOpenAddProductDialog] = useState(false);
   const [openServiceProvidersDialog, setOpenServiceProvidersDialog] = useState(false);
   const [openMakeProductDialog, setOpenMakeProductDialog] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const handleAddNewProduct = () => {
     setOpenAddProductDialog(true);
@@ -35,8 +36,18 @@ const ProductPage = () => {
     setOpenAddProductDialog(false);
   };
 
+  const handleProductAdded = () => {
+    setRefreshTrigger(prev => prev + 1);
+    setOpenAddProductDialog(false);
+  };
+
   const handleMakeProducts = () => setOpenMakeProductDialog(true);
   const handleCloseMakeProductDialog = () => setOpenMakeProductDialog(false);
+
+  const handleProductMade = () => {
+    setRefreshTrigger(prev => prev + 1);
+    setOpenMakeProductDialog(false);
+  };
 
   return (
     <Box
@@ -206,7 +217,7 @@ const ProductPage = () => {
           >
             Product Catalog
           </Typography>
-          <ProductList />
+          <ProductList refreshTrigger={refreshTrigger} />
         </Box>
       </Container>
 
@@ -252,7 +263,7 @@ const ProductPage = () => {
           </IconButton>
         </DialogTitle>
         <DialogContent dividers sx={{ p: 3 }}>
-          <ProductForm onProductAdded={handleCloseAddProductDialog} />
+          <ProductForm onProductAdded={handleProductAdded} />
         </DialogContent>
       </Dialog>
 
@@ -298,7 +309,7 @@ const ProductPage = () => {
           </IconButton>
         </DialogTitle>
         <DialogContent dividers sx={{ p: 3 }}>
-          <MakeProductForm />
+          <MakeProductForm onProductMade={handleProductMade} />
         </DialogContent>
       </Dialog>
 

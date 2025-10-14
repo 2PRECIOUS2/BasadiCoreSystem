@@ -30,13 +30,13 @@ const ApproveDeclineTimesheet = ({ open, timesheet, onClose, onSuccess }) => {
         setError('');
 
         try {
-            const response = await fetch(`${API_URL}/api/timesheets/${timesheet.id}/review`, {
-                method: 'PATCH',
+            const endpoint = action === 'approved' ? 'approve' : 'reject';
+            const response = await fetch(`${API_URL}/api/timesheets/${timesheet.id}/${endpoint}`, {
+                method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
                 body: JSON.stringify({ 
-                    action, 
-                    admin_notes: adminNotes 
+                    rejection_reason: action === 'rejected' ? adminNotes : undefined
                 })
             });
 
@@ -119,20 +119,20 @@ const ApproveDeclineTimesheet = ({ open, timesheet, onClose, onSuccess }) => {
                     </Typography>
                     <Grid container spacing={2}>
                         <Grid item xs={12} sm={6}>
-                            <Typography variant="body2" color="textSecondary">Time In</Typography>
-                            <Typography variant="body1">{formatTime(timesheet.time_in)}</Typography>
+                            <Typography variant="body2" color="textSecondary">Start Time</Typography>
+                            <Typography variant="body1">{formatTime(timesheet.start_time)}</Typography>
                         </Grid>
                         <Grid item xs={12} sm={6}>
-                            <Typography variant="body2" color="textSecondary">Time Out</Typography>
-                            <Typography variant="body1">{formatTime(timesheet.time_out)}</Typography>
+                            <Typography variant="body2" color="textSecondary">End Time</Typography>
+                            <Typography variant="body1">{formatTime(timesheet.end_time)}</Typography>
                         </Grid>
                         <Grid item xs={12} sm={6}>
-                            <Typography variant="body2" color="textSecondary">Break Start</Typography>
-                            <Typography variant="body1">{formatTime(timesheet.break_start)}</Typography>
+                            <Typography variant="body2" color="textSecondary">Break Duration</Typography>
+                            <Typography variant="body1">{timesheet.break_duration || 0} minutes</Typography>
                         </Grid>
                         <Grid item xs={12} sm={6}>
-                            <Typography variant="body2" color="textSecondary">Break End</Typography>
-                            <Typography variant="body1">{formatTime(timesheet.break_end)}</Typography>
+                            <Typography variant="body2" color="textSecondary">Total Hours</Typography>
+                            <Typography variant="body1">{timesheet.total_hours || 0} hours</Typography>
                         </Grid>
                     </Grid>
                 </Paper>
@@ -144,30 +144,28 @@ const ApproveDeclineTimesheet = ({ open, timesheet, onClose, onSuccess }) => {
                     </Typography>
                     <Grid container spacing={2}>
                         <Grid item xs={12} sm={4}>
-                            <Typography variant="body2" sx={{ opacity: 0.8 }}>Regular Hours</Typography>
-                            <Typography variant="h6">{parseFloat(timesheet.regular_hours || 0).toFixed(2)}</Typography>
-                        </Grid>
-                        <Grid item xs={12} sm={4}>
-                            <Typography variant="body2" sx={{ opacity: 0.8 }}>Overtime Hours</Typography>
-                            <Typography variant="h6">{parseFloat(timesheet.overtime_hours || 0).toFixed(2)}</Typography>
-                        </Grid>
-                        <Grid item xs={12} sm={4}>
                             <Typography variant="body2" sx={{ opacity: 0.8 }}>Total Hours</Typography>
-                            <Typography variant="h6">
-                                {(parseFloat(timesheet.regular_hours || 0) + parseFloat(timesheet.overtime_hours || 0)).toFixed(2)}
-                            </Typography>
+                            <Typography variant="h6">{parseFloat(timesheet.total_hours || 0).toFixed(2)}</Typography>
+                        </Grid>
+                        <Grid item xs={12} sm={4}>
+                            <Typography variant="body2" sx={{ opacity: 0.8 }}>Break Time</Typography>
+                            <Typography variant="h6">{parseFloat(timesheet.break_duration || 0)} min</Typography>
+                        </Grid>
+                        <Grid item xs={12} sm={4}>
+                            <Typography variant="body2" sx={{ opacity: 0.8 }}>Status</Typography>
+                            <Typography variant="h6">{timesheet.status}</Typography>
                         </Grid>
                     </Grid>
                 </Paper>
 
                 {/* Employee Notes */}
-                {timesheet.notes && (
+                {timesheet.work_done && (
                     <Paper sx={{ p: 2, mb: 3, bgcolor: 'background.default' }}>
                         <Typography variant="subtitle1" gutterBottom fontWeight="bold">
-                            Employee Notes
+                            Work Done
                         </Typography>
                         <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>
-                            {timesheet.notes}
+                            {timesheet.work_done}
                         </Typography>
                     </Paper>
                 )}
@@ -183,7 +181,7 @@ const ApproveDeclineTimesheet = ({ open, timesheet, onClose, onSuccess }) => {
                         rows={4}
                         value={adminNotes}
                         onChange={(e) => setAdminNotes(e.target.value)}
-                        placeholder="Add notes about your review decision (optional)..."
+                        placeholder="Add notes about your review decision (required for rejection)..."
                         variant="outlined"
                     />
                 </Paper>
@@ -193,7 +191,7 @@ const ApproveDeclineTimesheet = ({ open, timesheet, onClose, onSuccess }) => {
                     Cancel
                 </Button>
                 <Button 
-                    onClick={() => handleAction('declined')} 
+                    onClick={() => handleAction('rejected')} 
                     disabled={loading}
                     color="error"
                     variant="outlined"

@@ -4,7 +4,7 @@ import {
 } from '@mui/material';
 import { API_BASE_URL } from 'src/config';
 
-const MakeProductForm = () => {
+const MakeProductForm = ({ onProductMade }) => {
   const [products, setProducts] = useState([]);
   const [productMaterials, setProductMaterials] = useState([]);
   const [formData, setFormData] = useState({
@@ -98,12 +98,12 @@ useEffect(() => {
       quantity: parseInt(formData.quantity),
       production_date: formData.production_date,
       total_cost: parseFloat(totalCost),
-      materials_used: productMaterials.map(material => ({
+      materials_used: formData.method === 'scratch' ? productMaterials.map(material => ({
         material_id: material.material_id,
         measurement: material.measurement,
         unit: material.unit,
         unit_price: material.unit_price
-      })),
+      })) : [],
       provider_id: formData.method === 'provider' ? formData.provider_id : null,
       cost_of_production: formData.method === 'provider'
         ? parseFloat(formData.service_cost)
@@ -130,6 +130,9 @@ useEffect(() => {
         });
         setProductMaterials([]);
         setTimeout(() => setSuccess(''), 3000);
+        if (onProductMade) {
+          onProductMade(); // Call parent function to refresh products
+        }
       } else {
         const errorData = await response.json();
         setError(errorData.message || 'Failed to create production record');

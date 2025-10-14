@@ -40,19 +40,33 @@ export default function UpdateProject({ open, onClose, project, onSave }) {
   
   // Normalize tasks from backend to frontend format
   const normalizeTasks = (tasksArr) => {
-    if (!Array.isArray(tasksArr)) return [];
-    return tasksArr.map(t => ({
-      id: t.id || t.task_id,
-      name: t.name || t.task || "",
-      assignedStaff: t.assignedStaff || (t.staffId ? [t.staffId] : []),
-      staffInitials: t.staffInitials || (t.firstName && t.lastName 
-        ? `${t.firstName[0]}${t.lastName[0]}`.toUpperCase() 
-        : (t.first_name && t.last_name 
-          ? `${t.first_name[0]}${t.last_name[0]}`.toUpperCase() 
-          : "")),
-      deadline: t.deadline || t.taskDeadline || "",
-      completed: t.completed || false
-    }));
+    if (!Array.isArray(tasksArr)) {
+      console.log('⚠️ normalizeTasks: tasksArr is not an array:', tasksArr);
+      return [];
+    }
+    
+    const normalized = tasksArr.map(t => {
+      console.log('🔄 Normalizing task:', t);
+      
+      const result = {
+        id: t.id || t.task_id,
+        name: t.name || t.task || "",
+        assignedStaff: t.assignedStaff || (t.staffId ? [t.staffId] : (t.staff_id ? [t.staff_id] : [])),
+        staffInitials: t.staffInitials || (t.firstName && t.lastName 
+          ? `${t.firstName[0]}${t.lastName[0]}`.toUpperCase() 
+          : (t.first_name && t.last_name 
+            ? `${t.first_name[0]}${t.last_name[0]}`.toUpperCase() 
+            : "")),
+        deadline: t.deadline || t.taskDeadline || t.task_deadline || "",
+        completed: t.completed || false
+      };
+      
+      console.log('✅ Normalized task result:', result);
+      return result;
+    });
+    
+    console.log('✅ All normalized tasks:', normalized);
+    return normalized;
   };
 
   const [startDate, setStartDate] = useState("");
@@ -71,7 +85,13 @@ export default function UpdateProject({ open, onClose, project, onSave }) {
 
 
   useEffect(() => {
-    fetch(`${API_BASE_URL}/api/projects/employees`)
+    fetch(`${API_BASE_URL}/api/projects/employees`, {
+      method: 'GET',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    })
     .then(res => res.json())
     .then(data => setStaffList(data))
     .catch(() => setStaffList([]));
@@ -80,24 +100,51 @@ export default function UpdateProject({ open, onClose, project, onSave }) {
   useEffect(() => {
     // Always fetch the latest project details (with tasks) from backend
     if (project && project.id) {
-      fetch(`${API_BASE_URL}/api/projects/${project.id}`)
-      .then(res => res.json())
+      console.log('🔍 Fetching project details for ID:', project.id);
+      console.log('🔍 API URL:', `${API_BASE_URL}/api/projects/${project.id}`);
+      
+      fetch(`${API_BASE_URL}/api/projects/${project.id}`, {
+        method: 'GET',
+        credentials: 'include', // Important: Include cookies/session data
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      })
+      .then(res => {
+        console.log('🔍 Response status:', res.status);
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        return res.json();
+      })
       .then(data => {
+          console.log('✅ Fetched project data:', data);
+          console.log('✅ Tasks from API:', data.tasks);
+          
           setStartDate(formatDate(getField(data, "startDate", "start_date")));
           setDeadline(formatDate(getField(data, "deadline", "deadline")));
           setLocation(getField(data, "location", "location"));
           setPartner(getField(data, "partner", "partner"));
           setNotes(getField(data, "notes", "additional_notes"));
-          setTasks(normalizeTasks(data.tasks || []));
+          
+          const normalizedTasks = normalizeTasks(data.tasks || []);
+          console.log('✅ Normalized tasks:', normalizedTasks);
+          setTasks(normalizedTasks);
         })
-        .catch(() => {
+        .catch((error) => {
+          console.error('❌ Error fetching project:', error);
           // fallback to prop if fetch fails
+          console.log('📋 Using fallback project data:', project);
+          
           setStartDate(formatDate(getField(project, "startDate", "start_date")));
           setDeadline(formatDate(getField(project, "deadline", "deadline")));
           setLocation(getField(project, "location", "location"));
           setPartner(getField(project, "partner", "partner"));
           setNotes(getField(project, "notes", "additional_notes"));
-          setTasks(normalizeTasks(project.tasks || []));
+          
+          const fallbackTasks = normalizeTasks(project.tasks || []);
+          console.log('📋 Fallback tasks:', fallbackTasks);
+          setTasks(fallbackTasks);
         });
     }
   }, [project, open]);

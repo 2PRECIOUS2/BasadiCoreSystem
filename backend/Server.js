@@ -22,6 +22,7 @@ import ordersRouter from './routes/orders.js';
 import serviceProviderRoutes from './routes/serviceProvider.js';
 import timesheetRoutes from './routes/Timesheet.js';
 import productionRouter from './routes/production.js';
+import dashboardRouter from './routes/dashboard.js';
 import orderStatusUpdate from './cron/orderStatusUpdate.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -155,6 +156,7 @@ app.use('/api/orders', ordersRouter(dbModule.pool));
 app.use('/api/employees', employeesRoutes(dbModule.pool));
 app.use('/api/projects', projectsRouter(dbModule.pool));
 app.use('/api/timesheets', timesheetRoutes(dbModule.pool));
+app.use('/api/dashboard', dashboardRouter(dbModule.pool));
 
 // ---------------------- Session Management ----------------------
 // Session checker route (frontend uses this to verify session)

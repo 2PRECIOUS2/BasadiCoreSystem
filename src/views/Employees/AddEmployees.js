@@ -179,7 +179,11 @@ function AddEmployees({ open, onClose, onSave }) {
        if (response.ok) {
     const data = await response.json();
     setSnackbar({ open: true, message: "Employee successfully created!", severity: "success" });
+    
+    // Call onSave to refresh the employee list in parent component
     if (onSave) onSave(data);
+    
+    // Close dialog after a short delay to show success message
     setTimeout(() => {
       if (onClose) onClose();
     }, 1200);

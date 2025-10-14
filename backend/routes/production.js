@@ -71,6 +71,30 @@ const productionRouter = (pool) => {
 
       const production = productionResult.rows[0];
 
+      // 3.5. Insert product materials if production method is 'scratch'
+      if (production_method === 'scratch' && materials_used) {
+        for (const material of materials_used) {
+          console.log(`📝 Inserting product material: ${material.material_id} for product ${product_id}`);
+          
+          await client.query(`
+            INSERT INTO product_materials (
+              production_id, 
+              product_id, 
+              material_id, 
+              measurement, 
+              unit
+            ) VALUES ($1, $2, $3, $4, $5)
+          `, [
+            production.production_id, 
+            product_id, 
+            material.material_id, 
+            material.measurement, 
+            material.unit || 'items'
+          ]);
+        }
+        console.log(`✅ Inserted ${materials_used.length} product materials for product ${product_id}`);
+      }
+
       // 4. Update product cost and quantity
       await client.query(`
         UPDATE products
@@ -78,30 +102,87 @@ const productionRouter = (pool) => {
         WHERE product_id = $3
       `, [costOfProduction, quantity, product_id]);
 
-      // 5. Deduct materials from stock and sync unit price to active batch
+      // 5. Deduct materials from stock using FIFO (First In, First Out)
       if (production_method === 'scratch' && materials_used) {
         for (const material of materials_used) {
           const totalMaterialNeeded = material.measurement * quantity;
-          await client.query(`
-            UPDATE materials
-            SET quantity = quantity - $1
-            WHERE material_id = $2
-          `, [totalMaterialNeeded, material.material_id]);
+          let remainingToDeduct = totalMaterialNeeded;
 
-          // FIFO batch sync: update materials.unit_price to match active batch
-          const nextBatchResult = await client.query(
-            `SELECT unit_price FROM material_stock_items
-             WHERE material_id = $1 AND batch_status = 'active'
-             ORDER BY batch_number ASC LIMIT 1`,
-            [material.material_id]
-          );
+          console.log(`🔧 Deducting ${totalMaterialNeeded} from material ${material.material_id}`);
+
+          // Get active batches for this material, ordered by batch_number (FIFO)
+          const batchesResult = await client.query(`
+            SELECT id, quantity, unit_price, batch_number
+            FROM material_stock_items
+            WHERE material_id = $1 AND batch_status = 'active' AND quantity > 0
+            ORDER BY batch_number ASC
+          `, [material.material_id]);
+
+          // Deduct from batches using FIFO
+          for (const batch of batchesResult.rows) {
+            if (remainingToDeduct <= 0) break;
+
+            const deductFromThisBatch = Math.min(batch.quantity, remainingToDeduct);
+            const newBatchQuantity = batch.quantity - deductFromThisBatch;
+
+            console.log(`📦 Batch ${batch.batch_number}: Deducting ${deductFromThisBatch}, New qty: ${newBatchQuantity}`);
+
+            // Update batch quantity
+            await client.query(`
+              UPDATE material_stock_items 
+              SET quantity = $1
+              WHERE id = $2
+            `, [newBatchQuantity, batch.id]);
+
+            // If batch is empty, mark as inactive
+            if (newBatchQuantity === 0) {
+              await client.query(`
+                UPDATE material_stock_items 
+                SET batch_status = 'inactive'
+                WHERE id = $1
+              `, [batch.id]);
+              console.log(`🚫 Batch ${batch.batch_number} marked as inactive (empty)`);
+            }
+
+            remainingToDeduct -= deductFromThisBatch;
+          }
+
+          // Update total quantity in materials table
+          const totalQtyResult = await client.query(`
+            SELECT COALESCE(SUM(quantity), 0) as total_quantity
+            FROM material_stock_items
+            WHERE material_id = $1 AND batch_status = 'active'
+          `, [material.material_id]);
+
+          const newTotalQuantity = totalQtyResult.rows[0].total_quantity;
+          await client.query(`
+            UPDATE materials 
+            SET quantity = $1, updated_at = NOW()
+            WHERE material_id = $2
+          `, [newTotalQuantity, material.material_id]);
+
+          // Update material unit_price to match the next active batch (FIFO)
+          const nextBatchResult = await client.query(`
+            SELECT unit_price FROM material_stock_items
+            WHERE material_id = $1 AND batch_status = 'active' AND quantity > 0
+            ORDER BY batch_number ASC LIMIT 1
+          `, [material.material_id]);
+
           if (nextBatchResult.rows.length > 0) {
             const nextUnitPrice = nextBatchResult.rows[0].unit_price;
-            await client.query(
-              `UPDATE materials SET unit_price = $1 WHERE material_id = $2`,
-              [nextUnitPrice, material.material_id]
-            );
+            await client.query(`
+              UPDATE materials SET unit_price = $1 WHERE material_id = $2
+            `, [nextUnitPrice, material.material_id]);
+            console.log(`💰 Updated unit price to ${nextUnitPrice} for material ${material.material_id}`);
+          } else {
+            // No active batches left, set unit_price to 0
+            await client.query(`
+              UPDATE materials SET unit_price = 0 WHERE material_id = $1
+            `, [material.material_id]);
+            console.log(`⚠️ No active batches left for material ${material.material_id}, set unit_price to 0`);
           }
+
+          console.log(`✅ Material ${material.material_id} updated: New total quantity = ${newTotalQuantity}`);
         }
       }
 

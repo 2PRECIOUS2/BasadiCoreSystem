@@ -162,14 +162,7 @@ const ViewTimeSheet = ({ open, timesheet, onClose }) => {
                                         {timesheet.email}
                                     </Typography>
                                 </Grid>
-                                <Grid item xs={12} sm={6}>
-                                    <Typography variant="body2" color="text.secondary" gutterBottom>
-                                        Project
-                                    </Typography>
-                                    <Typography variant="body1">
-                                        {timesheet.project_name || 'No project assigned'}
-                                    </Typography>
-                                </Grid>
+                                
                             </Grid>
                         </Paper>
                     </Grid>

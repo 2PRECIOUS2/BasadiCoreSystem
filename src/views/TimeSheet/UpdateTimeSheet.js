@@ -111,8 +111,7 @@ const UpdateTimeSheet = ({ open, timesheet, onClose, onSuccess }) => {
         try {
             const submitData = {
                 ...formData,
-                regular_hours: regular,
-                overtime_hours: overtime
+                total_hours: regular + overtime
             };
 
             const response = await fetch(`${API_URL}/api/timesheets/${timesheet.id}`, {
@@ -237,6 +236,11 @@ const UpdateTimeSheet = ({ open, timesheet, onClose, onSuccess }) => {
                             <Box sx={{ p: 2, bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
                                 <Typography variant="subtitle2" gutterBottom>Calculated Hours:</Typography>
                                 <Grid container spacing={2}>
+                                    <Grid item xs={12}>
+                                        <Typography variant="body2">
+                                            Total Hours: <strong>{(regular + overtime).toFixed(2)}</strong>
+                                        </Typography>
+                                    </Grid>
                                     <Grid item xs={6}>
                                         <Typography variant="body2">
                                             Regular Hours: <strong>{regular.toFixed(2)}</strong>
@@ -244,12 +248,7 @@ const UpdateTimeSheet = ({ open, timesheet, onClose, onSuccess }) => {
                                     </Grid>
                                     <Grid item xs={6}>
                                         <Typography variant="body2">
-                                            Overtime Hours: <strong>{overtime.toFixed(2)}</strong>
-                                        </Typography>
-                                    </Grid>
-                                    <Grid item xs={12}>
-                                        <Typography variant="body2">
-                                            Total Hours: <strong>{(regular + overtime).toFixed(2)}</strong>
+                                            Break Duration: <strong>{formData.break_duration || 0} minutes</strong>
                                         </Typography>
                                     </Grid>
                                 </Grid>

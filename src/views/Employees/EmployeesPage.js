@@ -49,6 +49,7 @@ function EmployeesPage() {
   const [employees, setEmployees] = useState([]);
   const [editingEmployee, setEditingEmployee] = useState(null);
   const [viewingEmployee, setViewingEmployee] = useState(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
 
   useEffect(() => {
@@ -71,9 +72,8 @@ const handleUpdate = async (form) => {
     withCredentials: true
   });
   
-  // Refresh employees list
-  const res = await axios.get("/api/employees", { withCredentials: true });
-  setEmployees(res.data);
+  // Trigger refresh in EmployeesList
+  setRefreshTrigger(prev => prev + 1);
   setEditingEmployee(null);
 };
 
@@ -83,15 +83,9 @@ const handleUpdate = async (form) => {
   };
 
   const handleAddEmployee = (employee) => {
-    setEmployees([
-      ...employees,
-      {
-        ...employee,
-        id: employees.length + 1,
-        hiredDate: new Date().toLocaleDateString(),
-        color: "#b39ddb",
-      },
-    ]);
+    // Trigger refresh in EmployeesList by updating the refreshTrigger
+    setRefreshTrigger(prev => prev + 1);
+    setOpenAdd(false);
   };
 
   const handleView = (employee) => {
@@ -249,10 +243,9 @@ const handleUpdate = async (form) => {
             />
           ) : (
             <EmployeesList
-              employees={employees}
               onEdit={handleEdit}
               onView={handleView}
-              // pass onView, onArchive as needed
+              refreshTrigger={refreshTrigger}
             />
           )}
           </div>

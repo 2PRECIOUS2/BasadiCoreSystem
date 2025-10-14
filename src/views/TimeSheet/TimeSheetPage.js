@@ -46,115 +46,21 @@ import UpdateTimeSheet from './UpdateTimeSheet';
 import ViewTimeSheet from './ViewTimeSheet';
 import ApproveDeclineTimesheet from './ApproveDeclineTimesheet';
 import timesheetService from '../../services/timesheetService';
+import TimesheetPermissionGate from '../../components/shared/TimesheetPermissionGate';
+import { 
+    getCurrentUser, 
+    canCreateTimesheet, 
+    canViewAllTimesheets, 
+    canApproveTimesheets, 
+    canEditAllTimesheets,
+    canEditTimesheet,
+    isSuperAdmin 
+} from '../../utils/rbac';
+import { API_BASE_URL } from 'src/config';
 
 const TimeSheetPage = () => {
     const [activeTab, setActiveTab] = useState(0);
-    // Dummy data for testing
-    const [timesheets, setTimesheets] = useState([
-        {
-            id: 1,
-            date: '2025-10-04',
-            employee_id: 'EMP001',
-            first_name: 'John',
-            last_name: 'Doe',
-            email: 'john.doe@basadi.com',
-            time_in: '08:00',
-            time_out: '17:00',
-            break_start: '12:00',
-            break_end: '13:00',
-            total_hours: 8.0,
-            regular_hours: 8.0,
-            overtime_hours: 0.0,
-            status: 'approved',
-            work_done: 'Completed database optimization and fixed 3 critical bugs in the payment system. Attended team standup meeting.',
-            created_at: '2025-10-04T08:00:00Z',
-            updated_at: '2025-10-04T17:30:00Z',
-            submitted_at: '2025-10-04T17:15:00Z',
-            reviewed_at: '2025-10-04T18:00:00Z'
-        },
-        {
-            id: 2,
-            date: '2025-10-03',
-            employee_id: 'EMP002',
-            first_name: 'Jane',
-            last_name: 'Smith',
-            email: 'jane.smith@basadi.com',
-            time_in: '09:00',
-            time_out: '18:30',
-            break_start: '12:30',
-            break_end: '13:30',
-            total_hours: 8.5,
-            regular_hours: 8.0,
-            overtime_hours: 0.5,
-            status: 'submitted',
-            work_done: 'Designed new user interface components for the project dashboard. Created wireframes and mockups for client review.',
-            created_at: '2025-10-03T09:00:00Z',
-            updated_at: '2025-10-03T18:45:00Z',
-            submitted_at: '2025-10-03T18:40:00Z'
-        },
-        {
-            id: 3,
-            date: '2025-10-02',
-            employee_id: 'EMP003',
-            first_name: 'Mike',
-            last_name: 'Johnson',
-            email: 'mike.johnson@basadi.com',
-            time_in: '08:30',
-            time_out: '16:30',
-            break_start: '12:00',
-            break_end: '12:30',
-            total_hours: 7.5,
-            regular_hours: 7.5,
-            overtime_hours: 0.0,
-            status: 'draft',
-            work_done: 'Working on API documentation and testing new endpoints. Still in progress.',
-            created_at: '2025-10-02T08:30:00Z',
-            updated_at: '2025-10-02T16:35:00Z'
-        },
-        {
-            id: 4,
-            date: '2025-10-01',
-            employee_id: 'EMP004',
-            first_name: 'Sarah',
-            last_name: 'Wilson',
-            email: 'sarah.wilson@basadi.com',
-            time_in: '07:45',
-            time_out: '19:00',
-            break_start: '12:15',
-            break_end: '13:00',
-            total_hours: 10.5,
-            regular_hours: 8.0,
-            overtime_hours: 2.5,
-            status: 'declined',
-            work_done: 'Emergency server maintenance and system updates. Extended hours due to critical issues.',
-            admin_notes: 'Overtime not pre-approved. Please get approval before working extended hours.',
-            created_at: '2025-10-01T07:45:00Z',
-            updated_at: '2025-10-01T19:15:00Z',
-            submitted_at: '2025-10-01T19:10:00Z',
-            reviewed_at: '2025-10-02T09:00:00Z'
-        },
-        {
-            id: 5,
-            date: '2025-09-30',
-            employee_id: 'EMP005',
-            first_name: 'David',
-            last_name: 'Brown',
-            email: 'david.brown@basadi.com',
-            time_in: '08:15',
-            time_out: '17:15',
-            break_start: '13:00',
-            break_end: '14:00',
-            total_hours: 8.0,
-            regular_hours: 8.0,
-            overtime_hours: 0.0,
-            status: 'archived',
-            work_done: 'Code review sessions and mentoring junior developers. Updated coding standards documentation.',
-            created_at: '2025-09-30T08:15:00Z',
-            updated_at: '2025-09-30T17:30:00Z',
-            submitted_at: '2025-09-30T17:20:00Z',
-            reviewed_at: '2025-10-01T08:00:00Z'
-        }
-    ]);
+    const [timesheets, setTimesheets] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
@@ -167,24 +73,42 @@ const TimeSheetPage = () => {
         employeeId: ''
     });
     const [stats, setStats] = useState({
-        total_timesheets: 45,
-        submitted_count: 8,
-        approved_count: 32,
-        declined_count: 3,
-        archived_count: 2,
-        total_regular_hours: 320.5,
-        total_overtime_hours: 28.5,
-        draft_count: 5
+        total_timesheets: 0,
+        submitted_count: 0,
+        approved_count: 0,
+        declined_count: 0,
+        archived_count: 0,
+        total_regular_hours: 0,
+        total_overtime_hours: 0,
+        draft_count: 0
     });
 
-    // Get user info from localStorage or context
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    const isAdmin = user.role === 'super_admin' || user.role === 'admin';
+    // Get user permissions
+    const currentUser = getCurrentUser();
+    const canCreate = canCreateTimesheet();
+    const canViewAll = canViewAllTimesheets();
+    const canApprove = canApproveTimesheets();
+    const canEditAll = canEditAllTimesheets();
+    const canEditOwn = canEditTimesheet;
+    const user = currentUser;
+    const isUserSuperAdmin = isSuperAdmin();
+
+    console.log('🔍 TimeSheet Permissions:', {
+        canCreate,
+        canViewAll,
+        canApprove,
+        canEditAll,
+        canEditOwn,
+        isUserSuperAdmin,
+        userRole: user?.role,
+        userId: user?.id,
+        userEmployeeId: user?.employee_id || user?.employeeId
+    });
 
     // API base URL
     const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
-    // Fetch timesheets (disabled for dummy data)
+    // Fetch timesheets from API
     const fetchTimesheets = async () => {
         setLoading(true);
         setError('');
@@ -194,26 +118,86 @@ const TimeSheetPage = () => {
             if (filters.status) filterParams.status = filters.status;
             if (filters.startDate) filterParams.date_from = filters.startDate;
             if (filters.endDate) filterParams.date_to = filters.endDate;
-            if (filters.employeeId && isAdmin) filterParams.employee_id = filters.employeeId;
+            
+            // Only super admin can filter by employee_id (to see all timesheets)
+            // Regular employees will only see their own timesheets (handled by backend)
+            if (filters.employeeId && canViewAll) {
+                filterParams.employee_id = filters.employeeId;
+            }
 
+            console.log('🔍 Fetching timesheets with filters:', filterParams);
             const response = await timesheetService.getTimesheets(filterParams);
-            setTimesheets(response.timesheets || []);
+            
+            console.log('📦 Raw API response:', response);
+            
+            if (response.success) {
+                // Map timesheet data to ensure each row has a unique 'id' and correct employee name
+                const timesheetData = (response.data || response.timesheets || []).map(ts => ({
+                    ...ts,
+                    id: ts.id, // DataGrid requires 'id' field
+                    employee_name: `${ts.first_name || ''} ${ts.last_name || ''}`.trim() || '--',
+                }));
+                setTimesheets(timesheetData);
+                // Calculate stats from the timesheet data
+                const calculatedStats = calculateStatsFromTimesheets(timesheetData);
+                setStats(calculatedStats);
+                console.log('✅ Fetched timesheets:', timesheetData.length);
+            } else {
+                throw new Error(response.message || 'Failed to fetch timesheets');
+            }
         } catch (err) {
-            console.error('Error fetching timesheets:', err);
+            console.error('❌ Error fetching timesheets:', err);
             setError('Failed to fetch timesheets: ' + err.message);
+            setTimesheets([]);
         } finally {
             setLoading(false);
         }
     };
 
-    // Fetch statistics (disabled for dummy data)
+    // Calculate stats from current timesheet data
+    const calculateStatsFromTimesheets = (timesheetData) => {
+        const stats = {
+            total_timesheets: timesheetData.length,
+            draft_count: 0,
+            submitted_count: 0,
+            approved_count: 0,
+            declined_count: 0,
+            archived_count: 0,
+            total_regular_hours: 0
+        };
+
+        timesheetData.forEach(timesheet => {
+            // Count by status
+            switch (timesheet.status) {
+                case 'draft':
+                    stats.draft_count++;
+                    break;
+                case 'submitted':
+                    stats.submitted_count++;
+                    break;
+                case 'approved':
+                    stats.approved_count++;
+                    break;
+                case 'declined':
+                case 'rejected':
+                    stats.declined_count++;
+                    break;
+                case 'archived':
+                    stats.archived_count++;
+                    break;
+            }
+
+            // Sum total hours
+            const hours = parseFloat(timesheet.total_hours || 0);
+            stats.total_regular_hours += hours;
+        });
+
+        return stats;
+    };
+
+    // Fetch statistics
     const fetchStats = async () => {
-        // Temporarily disabled to show dummy data
-        console.log('Using dummy stats data instead of API call');
-        return;
-        
-        /* Original API call - commented out for dummy data testing
-        if (!isAdmin) return;
+        if (!canViewAll) return; // Only admins can see stats
         
         try {
             const params = new URLSearchParams();
@@ -221,25 +205,32 @@ const TimeSheetPage = () => {
             if (filters.endDate) params.append('end_date', filters.endDate);
             if (filters.employeeId) params.append('employee_id', filters.employeeId);
 
+            console.log('🔍 Fetching stats with params:', params.toString());
             const response = await fetch(`${API_URL}/api/timesheets/stats/summary?${params}`, {
                 credentials: 'include'
             });
 
-            if (response.ok) {
-                const data = await response.json();
-                setStats(data.stats);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            if (data.success) {
+                setStats(data.stats || {});
+                console.log('✅ Fetched stats:', data.stats);
+            } else {
+                console.warn('⚠️ Stats fetch returned no data');
+                setStats({});
             }
         } catch (err) {
-            console.error('Failed to fetch stats:', err);
+            console.error('❌ Failed to fetch stats:', err);
+            setStats({});
         }
-        */
     };
 
     useEffect(() => {
         fetchTimesheets();
-        if (isAdmin) {
-            fetchStats();
-        }
+        // Stats are now calculated from timesheet data in fetchTimesheets()
     }, [filters]);
 
     // Handle status change
@@ -258,7 +249,7 @@ const TimeSheetPage = () => {
 
             setSuccess(`Timesheet ${action} successfully`);
             fetchTimesheets();
-            if (isAdmin) fetchStats();
+            if (canViewAll) fetchStats();
         } catch (err) {
             setError('Failed to update timesheet: ' + err.message);
         }
@@ -293,7 +284,7 @@ const TimeSheetPage = () => {
 
             setSuccess('Timesheet archived successfully');
             fetchTimesheets();
-            if (isAdmin) fetchStats();
+            if (canViewAll) fetchStats();
         } catch (err) {
             setError('Failed to archive timesheet: ' + err.message);
         }
@@ -327,58 +318,23 @@ const TimeSheetPage = () => {
     // DataGrid columns
     const columns = [
         { field: 'date', headerName: 'Date', width: 120, headerAlign: 'center', align: 'center' },
-        { 
-            field: 'employee_id', 
-            headerName: 'Employee ID', 
-            width: 120,
-            headerAlign: 'center',
-            align: 'center'
-        },
-        { field: 'time_in', headerName: 'Time In', width: 100, headerAlign: 'center', align: 'center' },
-        { field: 'time_out', headerName: 'Time Out', width: 100, headerAlign: 'center', align: 'center' },
-        { 
-            field: 'break_start', 
-            headerName: 'Break Start', 
-            width: 110, 
-            headerAlign: 'center', 
-            align: 'center',
-            valueFormatter: (params) => params.value || '--'
-        },
-        { 
-            field: 'break_end', 
-            headerName: 'Break End', 
-            width: 110, 
-            headerAlign: 'center', 
-            align: 'center',
-            valueFormatter: (params) => params.value || '--'
-        },
-        { 
-            field: 'total_hours', 
-            headerName: 'Total Hours', 
-            width: 120, 
-            headerAlign: 'center', 
-            align: 'center',
-            valueFormatter: (params) => parseFloat(params.value || 0).toFixed(2)
-        },
-        { 
-            field: 'status', 
-            headerName: 'Status', 
-            width: 120,
-            headerAlign: 'center',
-            align: 'center',
-            renderCell: (params) => getStatusChip(params.value)
-        },
+        { field: 'employee_id', headerName: 'Employee ID', width: 120, headerAlign: 'center', align: 'center' },
+        { field: 'start_time', headerName: 'Start Time', width: 120, headerAlign: 'center', align: 'center' },
+        { field: 'end_time', headerName: 'End Time', width: 120, headerAlign: 'center', align: 'center' },
+        { field: 'total_hours', headerName: 'Total Hours', width: 120, headerAlign: 'center', align: 'center' },
+        { field: 'status', headerName: 'Status', width: 120, headerAlign: 'center', align: 'center' },
         {
             field: 'actions',
             headerName: 'Actions',
             width: 200,
             sortable: false,
             renderCell: (params) => {
+                if (!params || !params.row) return null;
                 const timesheet = params.row;
-                const canEdit = isAdmin || ['draft', 'declined'].includes(timesheet.status);
-                const canSubmit = !isAdmin && ['draft', 'declined'].includes(timesheet.status);
-                const canReview = isAdmin && timesheet.status === 'submitted';
-                const canArchive = isAdmin && ['approved', 'declined'].includes(timesheet.status);
+                const canEdit = (canEditAll || (canEditOwn && timesheet.employee_id === user.employee_id)) && ['draft', 'declined'].includes(timesheet.status);
+                const canSubmit = canCreate && ['draft', 'declined'].includes(timesheet.status) && timesheet.employee_id === user.employee_id;
+                const canReview = canApprove && timesheet.status === 'submitted';
+                const canArchive = canEditAll && ['approved', 'declined'].includes(timesheet.status);
 
                 return (
                     <Box>
@@ -485,7 +441,7 @@ const TimeSheetPage = () => {
                                 startIcon={<RefreshIcon />}
                                 onClick={() => {
                                     fetchTimesheets();
-                                    if (isAdmin) fetchStats();
+                                    if (canViewAll) fetchStats();
                                 }}
                                 sx={{
                                     color: 'white',
@@ -498,109 +454,111 @@ const TimeSheetPage = () => {
                             >
                                 Refresh
                             </Button>
-                            <Button
-                                variant="contained"
-                                startIcon={<AddIcon />}
-                                onClick={() => setOpenDialog('create')}
-                                sx={{
-                                    bgcolor: 'rgba(255,255,255,0.2)',
-                                    backdropFilter: 'blur(10px)',
-                                    '&:hover': {
-                                        bgcolor: 'rgba(255,255,255,0.3)'
-                                    }
-                                }}
-                            >
-                                New Timesheet
-                            </Button>
+                            <TimesheetPermissionGate permission="create">
+                                <Button
+                                    variant="contained"
+                                    startIcon={<AddIcon />}
+                                    onClick={() => setOpenDialog('create')}
+                                    sx={{
+                                        bgcolor: 'rgba(255,255,255,0.2)',
+                                        backdropFilter: 'blur(10px)',
+                                        '&:hover': {
+                                            bgcolor: 'rgba(255,255,255,0.3)'
+                                        }
+                                    }}
+                                >
+                                    New Timesheet
+                                </Button>
+                            </TimesheetPermissionGate>
                         </Box>
                     </Box>
                 </Paper>
 
-                {/* Enhanced Statistics (Admin only) */}
-                {isAdmin && stats && (
+                {/* Enhanced Statistics */}
+                {stats && (
                     <Grid container spacing={3} mb={3}>
-                        <Grid item xs={12} sm={6} md={2.4}>
+                        <Grid item xs={12} sm={6} md={3}>
                             <Card sx={{ 
                                 p: 3, 
                                 textAlign: 'center',
                                 background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                                 color: 'white',
                                 borderRadius: 2,
-                                boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
+                                boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                                height: '140px',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                justifyContent: 'center'
                             }}>
                                 <AccessTime sx={{ fontSize: 40, mb: 1, opacity: 0.8 }} />
                                 <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 1 }}>
-                                    {stats.total_timesheets}
+                                    {stats.total_timesheets || 0}
                                 </Typography>
                                 <Typography variant="body2" sx={{ opacity: 0.9 }}>Total Timesheets</Typography>
                             </Card>
                         </Grid>
-                        <Grid item xs={12} sm={6} md={2.4}>
+                        <Grid item xs={12} sm={6} md={3}>
+                            <Card sx={{ 
+                                p: 3, 
+                                textAlign: 'center',
+                                background: 'linear-gradient(135deg, #9e9e9e 0%, #757575 100%)',
+                                color: 'white',
+                                borderRadius: 2,
+                                boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                                height: '140px',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                justifyContent: 'center'
+                            }}>
+                                <Assignment sx={{ fontSize: 40, mb: 1, opacity: 0.8 }} />
+                                <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 1 }}>
+                                    {stats.draft_count || 0}
+                                </Typography>
+                                <Typography variant="body2" sx={{ opacity: 0.9 }}>Draft</Typography>
+                            </Card>
+                        </Grid>
+                        <Grid item xs={12} sm={6} md={3}>
                             <Card sx={{ 
                                 p: 3, 
                                 textAlign: 'center',
                                 background: 'linear-gradient(135deg, #ff9800 0%, #f57c00 100%)',
                                 color: 'white',
                                 borderRadius: 2,
-                                boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
+                                boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                                height: '140px',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                justifyContent: 'center'
                             }}>
                                 <Assignment sx={{ fontSize: 40, mb: 1, opacity: 0.8 }} />
                                 <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 1 }}>
-                                    {stats.submitted_count}
+                                    {stats.submitted_count || 0}
                                 </Typography>
                                 <Typography variant="body2" sx={{ opacity: 0.9 }}>Pending Review</Typography>
                             </Card>
                         </Grid>
-                        <Grid item xs={12} sm={6} md={2.4}>
+                        <Grid item xs={12} sm={6} md={3}>
                             <Card sx={{ 
                                 p: 3, 
                                 textAlign: 'center',
                                 background: 'linear-gradient(135deg, #4caf50 0%, #388e3c 100%)',
                                 color: 'white',
                                 borderRadius: 2,
-                                boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
+                                boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                                height: '140px',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                justifyContent: 'center'
                             }}>
                                 <CheckCircle sx={{ fontSize: 40, mb: 1, opacity: 0.8 }} />
                                 <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 1 }}>
-                                    {stats.approved_count}
+                                    {stats.approved_count || 0}
                                 </Typography>
                                 <Typography variant="body2" sx={{ opacity: 0.9 }}>Approved</Typography>
                             </Card>
                         </Grid>
-                        <Grid item xs={12} sm={6} md={2.4}>
-                            <Card sx={{ 
-                                p: 3, 
-                                textAlign: 'center',
-                                background: 'linear-gradient(135deg, #2196f3 0%, #1976d2 100%)',
-                                color: 'white',
-                                borderRadius: 2,
-                                boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
-                            }}>
-                                <Schedule sx={{ fontSize: 40, mb: 1, opacity: 0.8 }} />
-                                <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 1 }}>
-                                    {parseFloat(stats.total_regular_hours || 0).toFixed(0)}
-                                </Typography>
-                                <Typography variant="body2" sx={{ opacity: 0.9 }}>Regular Hours</Typography>
-                            </Card>
-                        </Grid>
-                        <Grid item xs={12} sm={6} md={2.4}>
-                            <Card sx={{ 
-                                p: 3, 
-                                textAlign: 'center',
-                                background: 'linear-gradient(135deg, #9c27b0 0%, #7b1fa2 100%)',
-                                color: 'white',
-                                borderRadius: 2,
-                                boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
-                            }}>
-                                <TrendingUp sx={{ fontSize: 40, mb: 1, opacity: 0.8 }} />
-                                <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 1 }}>
-                                    {parseFloat(stats.total_overtime_hours || 0).toFixed(0)}
-                                </Typography>
-                                <Typography variant="body2" sx={{ opacity: 0.9 }}>Overtime Hours</Typography>
-                            </Card>
-                        </Grid>
                     </Grid>
-                )}
+                    )}
 
                 {/* Filters */}
                 <Card sx={{ p: 2, mb: 3 }}>
@@ -644,7 +602,7 @@ const TimeSheetPage = () => {
                                 onChange={(e) => setFilters(prev => ({ ...prev, endDate: e.target.value }))}
                             />
                         </Grid>
-                        {isAdmin && (
+                        <TimesheetPermissionGate permission="view_all">
                             <Grid item xs={12} sm={6} md={2}>
                                 <TextField
                                     fullWidth
@@ -654,7 +612,7 @@ const TimeSheetPage = () => {
                                     onChange={(e) => setFilters(prev => ({ ...prev, employeeId: e.target.value }))}
                                 />
                             </Grid>
-                        )}
+                        </TimesheetPermissionGate>
                         <Grid item>
                             <Button
                                 variant="outlined"
@@ -749,7 +707,7 @@ const TimeSheetPage = () => {
                         setOpenDialog('');
                         setSuccess(`Timesheet ${action} successfully`);
                         fetchTimesheets();
-                        if (isAdmin) fetchStats();
+                        if (canViewAll) fetchStats();
                     }}
                 />
             </Box>

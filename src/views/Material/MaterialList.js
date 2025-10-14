@@ -30,7 +30,7 @@ import AddIcon from '@mui/icons-material/Add';
 import MaterialForm from './MaterialForm';
 import { API_BASE_URL } from '../../config';
 
-const MaterialList = () => {
+const MaterialList = ({ refreshTrigger }) => {
   // State declarations must come first
   const [materials, setMaterials] = useState([]);
     const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -119,6 +119,13 @@ const MaterialList = () => {
   useEffect(() => {
     fetchMaterials();
   }, [statusFilter]); // Refetch when status filter changes
+
+  // Watch for external refresh triggers
+  useEffect(() => {
+    if (refreshTrigger) {
+      fetchMaterials();
+    }
+  }, [refreshTrigger]);
 
   const handleSearch = (e) => {
     e.preventDefault();

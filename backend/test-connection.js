@@ -32,7 +32,7 @@ async function testConnection() {
       console.log('👥 Employee count:', empCount.rows[0].count);
       
       // Show first few employees with roles
-      const employees = await pool.query('SELECT staff_id, email, first_name, last_name, role, status FROM employees LIMIT 3');
+      const employees = await pool.query('SELECT employee_id, email, first_name, last_name, role, employment_status FROM employees LIMIT 3');
       console.log('👤 Sample employees:', employees.rows);
     }
     

@@ -71,27 +71,13 @@ export default function CreateProject({ open, onClose, onSave }) {
   const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" });
   const [errors, setErrors] = useState({});
 
-  // Dummy staff data for development  
-  const availableStaff = [
-    { id: 1, name: "John Smith", role: "Project Manager" },
-    { id: 2, name: "Sarah Johnson", role: "Developer" },
-    { id: 3, name: "Mike Brown", role: "Designer" },
-    { id: 4, name: "Lisa Davis", role: "QA Engineer" },
-    { id: 5, name: "Tom Wilson", role: "Business Analyst" }
-  ];
-
   // Legacy task system (for backward compatibility)
   const [tasks, setTasks] = useState([]);
   const [taskInput, setTaskInput] = useState("");
   const [taskStaff, setTaskStaff] = useState([]);
   const [taskDeadline, setTaskDeadline] = useState("");
   const [notes, setNotes] = useState("");
-  const [staffList, setStaffList] = useState([
-    // Dummy staff data as fallback
-    { employee_id: 'EMP001', first_name: 'John', last_name: 'Doe', email: 'john.doe@basadi.com' },
-    { employee_id: 'EMP002', first_name: 'Jane', last_name: 'Smith', email: 'jane.smith@basadi.com' },
-    { employee_id: 'EMP003', first_name: 'Mike', last_name: 'Johnson', email: 'mike.johnson@basadi.com' }
-  ]);
+  const [staffList, setStaffList] = useState([]);
 
   // Fetch staff from backend with proper error handling
   useEffect(() => {
@@ -157,10 +143,21 @@ export default function CreateProject({ open, onClose, onSave }) {
     if (!location) newErrors.location = "Location is required";
     if (!description) newErrors.description = "Project description is required";
     if (staffAssignment.length === 0) newErrors.staffAssignment = "At least one staff member must be assigned";
+    if (tasks.length === 0) newErrors.tasks = "At least one project task is required";
     
     if (startDate && deadline && startDate > deadline) {
       newErrors.deadline = "Deadline cannot be before start date";
     }
+
+    // Validate task deadlines are within project timeline
+    tasks.forEach((task, idx) => {
+      if (task.deadline && startDate && task.deadline < startDate) {
+        newErrors.tasks = "Task deadlines cannot be before project start date";
+      }
+      if (task.deadline && deadline && task.deadline > deadline) {
+        newErrors.tasks = "Task deadlines cannot be after project deadline";
+      }
+    });
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -184,7 +181,14 @@ export default function CreateProject({ open, onClose, onSave }) {
       location,
       partner,
       description,
-      staffAssignment,
+      staff: staffAssignment, // General project staff
+      tasks: tasks.map(t => ({
+        name: t.name,
+        staffId: t.assignedStaff.length > 0 ? t.assignedStaff[0] : null, // Backend currently handles single staff per task
+        taskDeadline: t.deadline,
+        completed: false
+      })),
+      additionalNotes: notes,
       status: "active"
     };
     
@@ -197,9 +201,10 @@ export default function CreateProject({ open, onClose, onSave }) {
       });
       
       if (response.ok) {
+        const createdProject = await response.json();
         setSnackbar({ open: true, message: "Project created successfully!", severity: "success" });
         handleClose();
-        if (onSave) onSave();
+        if (onSave) onSave(createdProject);
       } else {
         const errorData = await response.json();
         setSnackbar({ 
@@ -230,6 +235,11 @@ export default function CreateProject({ open, onClose, onSave }) {
     setPartner("");
     setDescription("");
     setStaffAssignment([]);
+    setTasks([]);
+    setTaskInput("");
+    setTaskStaff([]);
+    setTaskDeadline("");
+    setNotes("");
     setErrors({});
     setLoading(false);
     onClose();
@@ -482,9 +492,10 @@ export default function CreateProject({ open, onClose, onSave }) {
                   renderValue={(selected) => (
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                       {selected.map((value) => {
-                        const staff = availableStaff.find(s => s.id === value);
+                        const staff = staffList.find(s => s.employee_id === value);
+                        const staffName = staff ? `${staff.first_name} ${staff.last_name}` : value;
                         return (
-                          <Chip key={value} label={staff?.name || value} size="small" 
+                          <Chip key={value} label={staffName} size="small" 
                             sx={{ 
                               bgcolor: '#667eea', 
                               color: 'white',
@@ -500,26 +511,205 @@ export default function CreateProject({ open, onClose, onSave }) {
                     '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#667eea', borderWidth: 2 }
                   }}
                 >
-                  {availableStaff.map((staff) => (
-                    <MenuItem key={staff.id} value={staff.id}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <Avatar sx={{ width: 32, height: 32, bgcolor: '#667eea' }}>
-                          {staff.name.charAt(0)}
-                        </Avatar>
-                        <Box>
-                          <Typography>{staff.name}</Typography>
-                          <Typography variant="caption" color="textSecondary">
-                            {staff.role}
-                          </Typography>
-                        </Box>
-                      </Box>
+                  {staffList.length === 0 ? (
+                    <MenuItem disabled>
+                      <Typography color="textSecondary">
+                        {open ? 'Loading staff members...' : 'No staff members available'}
+                      </Typography>
                     </MenuItem>
-                  ))}
+                  ) : (
+                    staffList.map((staff) => (
+                      <MenuItem key={staff.employee_id} value={staff.employee_id}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                          <Avatar sx={{ width: 32, height: 32, bgcolor: '#667eea' }}>
+                            {staff.first_name?.charAt(0)}{staff.last_name?.charAt(0)}
+                          </Avatar>
+                          <Box>
+                            <Typography>{staff.first_name} {staff.last_name}</Typography>
+                            <Typography variant="caption" color="textSecondary">
+                              {staff.email}
+                            </Typography>
+                          </Box>
+                        </Box>
+                      </MenuItem>
+                    ))
+                  )}
                 </Select>
                 {errors.staffAssignment && (
                   <Typography color="error" variant="caption">{errors.staffAssignment}</Typography>
                 )}
               </FormControl>
+            </Box>
+
+            {/* Task Management Section */}
+            <Box sx={{ mb: 4 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+                <Assignment sx={{ color: '#667eea', fontSize: 28 }} />
+                <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#2d3748' }}>
+                  Project Tasks
+                </Typography>
+              </Box>
+              <Divider sx={{ mb: 3, borderColor: '#667eea', borderWidth: 1 }} />
+              
+              {/* Add Task Form */}
+              <Box sx={{ 
+                p: 3, 
+                border: '1px solid #e2e8f0', 
+                borderRadius: 2, 
+                mb: 3,
+                backgroundColor: '#f8fafc'
+              }}>
+                <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold' }}>
+                  Add New Task
+                </Typography>
+                <Grid container spacing={2} alignItems="center">
+                  <Grid item xs={12} sm={4}>
+                    <TextField
+                      label="Task Name"
+                      value={taskInput}
+                      onChange={(e) => setTaskInput(e.target.value)}
+                      fullWidth
+                      size="small"
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          '&:hover fieldset': { borderColor: '#667eea' },
+                          '&.Mui-focused fieldset': { borderColor: '#667eea' }
+                        }
+                      }}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={3}>
+                    <FormControl fullWidth size="small">
+                      <InputLabel>Assign Staff</InputLabel>
+                      <Select
+                        multiple
+                        value={taskStaff}
+                        onChange={(e) => setTaskStaff(e.target.value)}
+                        input={<OutlinedInput label="Assign Staff" />}
+                        renderValue={(selected) => (
+                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                            {selected.map((id) => {
+                              const staff = staffList.find(s => s.employee_id === id);
+                              const staffName = staff ? `${staff.first_name} ${staff.last_name}` : id;
+                              return <Chip key={id} label={staffName} size="small" />;
+                            })}
+                          </Box>
+                        )}
+                      >
+                        {staffList.length === 0 ? (
+                          <MenuItem disabled>
+                            <Typography color="textSecondary">No staff available</Typography>
+                          </MenuItem>
+                        ) : (
+                          staffList.map((staff) => (
+                            <MenuItem key={staff.employee_id} value={staff.employee_id}>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Avatar sx={{ width: 24, height: 24, bgcolor: '#667eea', fontSize: '0.75rem' }}>
+                                  {staff.first_name?.charAt(0)}{staff.last_name?.charAt(0)}
+                                </Avatar>
+                                <Typography variant="body2">
+                                  {staff.first_name} {staff.last_name}
+                                </Typography>
+                              </Box>
+                            </MenuItem>
+                          ))
+                        )}
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  <Grid item xs={12} sm={3}>
+                    <TextField
+                      label="Task Deadline"
+                      type="date"
+                      value={taskDeadline}
+                      onChange={(e) => setTaskDeadline(e.target.value)}
+                      InputLabelProps={{ shrink: true }}
+                      fullWidth
+                      size="small"
+                      inputProps={{
+                        min: startDate || undefined,
+                        max: deadline || undefined
+                      }}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          '&:hover fieldset': { borderColor: '#667eea' },
+                          '&.Mui-focused fieldset': { borderColor: '#667eea' }
+                        }
+                      }}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={2}>
+                    <Button
+                      variant="contained"
+                      onClick={handleAddTask}
+                      fullWidth
+                      startIcon={<AddIcon />}
+                      sx={{
+                        background: 'linear-gradient(45deg, #667eea, #764ba2)',
+                        '&:hover': {
+                          background: 'linear-gradient(45deg, #5a67d8, #6b46c1)'
+                        }
+                      }}
+                    >
+                      Add Task
+                    </Button>
+                  </Grid>
+                </Grid>
+              </Box>
+
+              {/* Tasks List */}
+              {tasks.length > 0 && (
+                <Box sx={{ 
+                  border: '1px solid #e2e8f0', 
+                  borderRadius: 2,
+                  backgroundColor: 'white'
+                }}>
+                  <Typography variant="subtitle1" sx={{ p: 2, fontWeight: 'bold', borderBottom: '1px solid #e2e8f0' }}>
+                    Project Tasks ({tasks.length})
+                  </Typography>
+                  <List dense>
+                    {tasks.map((task, idx) => (
+                      <ListItem key={idx} divider={idx < tasks.length - 1}>
+                        <ListItemText
+                          primary={
+                            <Typography variant="body1" sx={{ fontWeight: 'medium' }}>
+                              {task.name}
+                            </Typography>
+                          }
+                          secondary={
+                            <Box sx={{ mt: 1 }}>
+                              <Typography variant="body2" color="textSecondary">
+                                <strong>Assigned to:</strong>{' '}
+                                {task.assignedStaff.length > 0
+                                  ? task.assignedStaff
+                                      .map(id => {
+                                        const staff = staffList.find(s => s.employee_id === id);
+                                        return staff ? `${staff.first_name} ${staff.last_name}` : id;
+                                      })
+                                      .join(', ')
+                                  : 'Unassigned'}
+                              </Typography>
+                              <Typography variant="body2" color="textSecondary">
+                                <strong>Deadline:</strong> {task.deadline}
+                              </Typography>
+                            </Box>
+                          }
+                        />
+                        <ListItemSecondaryAction>
+                          <IconButton
+                            edge="end"
+                            onClick={() => handleRemoveTask(idx)}
+                            color="error"
+                            size="small"
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </ListItemSecondaryAction>
+                      </ListItem>
+                    ))}
+                  </List>
+                </Box>
+              )}
             </Box>
 
             {/* Description Section */}
@@ -542,6 +732,33 @@ export default function CreateProject({ open, onClose, onSave }) {
                 required
                 error={!!errors.description}
                 helperText={errors.description}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    '&:hover fieldset': { borderColor: '#667eea', borderWidth: 2 },
+                    '&.Mui-focused fieldset': { borderColor: '#667eea', borderWidth: 2 }
+                  },
+                  '& .MuiInputLabel-root.Mui-focused': { color: '#667eea' }
+                }}
+              />
+            </Box>
+
+            {/* Additional Notes Section */}
+            <Box sx={{ mb: 4 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+                <EventNote sx={{ color: '#667eea', fontSize: 28 }} />
+                <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#2d3748' }}>
+                  Additional Notes (Optional)
+                </Typography>
+              </Box>
+              <Divider sx={{ mb: 3, borderColor: '#667eea', borderWidth: 1 }} />
+              
+              <TextField
+                label="Any additional information, requirements, or special considerations"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                multiline
+                rows={3}
+                fullWidth
                 sx={{
                   '& .MuiOutlinedInput-root': {
                     '&:hover fieldset': { borderColor: '#667eea', borderWidth: 2 },

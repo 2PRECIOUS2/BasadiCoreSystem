@@ -15,7 +15,7 @@ import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline'; // For 
 import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline'; // To remove a material line
 import { API_BASE_URL } from 'src/config';
 
-const ProductForm = () => {
+const ProductForm = ({ onProductAdded }) => {
   const [productDetails, setProductDetails] = useState({
     product_name: '',
     quantity: 0,
@@ -175,9 +175,9 @@ const prepareMaterialsForSubmission = () => {
       setProductMaterials([{ materialId: '', measurement: '', unit: '', saved: false }]);
       setCostOfProduction(0);
       setImage(null);
-    //if (onProductAdded) {
-          //onProductAdded(); // Call parent function to refresh products
-   // }
+      if (onProductAdded) {
+        onProductAdded(); // Call parent function to refresh products
+      }
     } else {
       setMessage({ type: 'error', text: 'Failed to add product.' });
     }
