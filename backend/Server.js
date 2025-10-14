@@ -213,7 +213,7 @@ app.post('/api/logout', (req, res) => {
 // Serve images from the public directory
 app.use('/images', express.static(path.join(__dirname, 'public/images')));
 
-const clientBuilPath = path.resolve(__dirname, '../build');
+const clientBuildPath = path.resolve(__dirname, '../build');
 app.use(express.static(clientBuildPath));
 
 app.get('*', (req, res, next) => {
