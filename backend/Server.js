@@ -137,7 +137,7 @@ app.get('/api/check-session', (req, res) => {
     });
 });
 
-app.use(requireLogin);
+app.use('/api', requireLogin);
 
 // ---------------------- Routes ----------------------
 app.use('/api/login', loginRoutes(dbModule.pool));
@@ -213,11 +213,21 @@ app.post('/api/logout', (req, res) => {
 // Serve images from the public directory
 app.use('/images', express.static(path.join(__dirname, 'public/images')));
 
+// Serve static frontend build (Vite output)
+const clientBuildPath = path.resolve(__dirname, '../build');
+app.use(express.static(clientBuildPath));
+
+// SPA fallback for client-side routing (non-API routes)
+app.get('*', (req, res, next) => {
+  if (req.path.startsWith('/api')) return next();
+  res.sendFile(path.join(clientBuildPath, 'index.html'));
+});
+
 // ---------------------- Cron jobs ----------------------
 orderStatusUpdate(dbModule.pool);
 
-// Basic test route
-app.get('/', (req, res) => {
+// Basic health endpoint
+app.get('/api/health', (req, res) => {
   res.json({ 
     message: 'BasadiCore Backend API is running!', 
     timestamp: new Date().toISOString(),
