@@ -66,13 +66,18 @@ app.use(session({
 
 // Update the requireLogin middleware to use 20-minute timeout
 function requireLogin(req, res, next) {
-  // Allow login and register routes without session
+  // When mounted at '/api', req.path excludes '/api'
+  const pathOnly = req.path || '';
+  // Allow unauthenticated API endpoints and static files
   if (
-    req.path.startsWith('/api/login') ||
-    req.path.startsWith('/api/register') ||
-    req.path === '/' ||
-    req.path.startsWith('/images') ||
-    req.path === '/api/check-session'
+    req.method === 'OPTIONS' ||
+    pathOnly === '/' ||
+    pathOnly.startsWith('/images') ||
+    pathOnly === '/login' ||
+    pathOnly === '/register' ||
+    pathOnly === '/check-session' ||
+    pathOnly === '/session-check' ||
+    pathOnly === '/health'
   ) {
     return next();
   }
@@ -214,13 +219,12 @@ app.post('/api/logout', (req, res) => {
 app.use('/images', express.static(path.join(__dirname, 'public/images')));
 
 // Serve static frontend build (Vite output)
-const clientBuildPath = path.resolve(__dirname, '../build');
-app.use(express.static(clientBuildPath));
+app.use(express.static(path.resolve(__dirname, '../build')));
 
 // SPA fallback for client-side routing (non-API routes)
 app.get('*', (req, res, next) => {
   if (req.path.startsWith('/api')) return next();
-  res.sendFile(path.join(clientBuildPath, 'index.html'));
+  res.sendFile(path.resolve(__dirname, '../build', 'index.html'));
 });
 
 // ---------------------- Cron jobs ----------------------
