@@ -19,64 +19,16 @@ const storage = multer.diskStorage({
     cb(null, uniqueName);
   }
 });
-
 const upload = multer({ storage });
 
 const materialRoutes = (pool) => {
 
-  // Add new batch for a material
-  router.post('/add-material-stock', async (req, res) => {
-    const { material_id, supplier_name, quantity, price_bought, unit_price, purchase_date } = req.body;
-    let client;
-    try {
-      client = await pool.connect();
-      await client.query('BEGIN');
-
-      // 1. Get next batch number for this material
-      const batchNumResult = await client.query(
-        `SELECT COALESCE(MAX(batch_number), 0) + 1 AS next_batch_number
-         FROM material_stock_items
-         WHERE material_id = $1`,
-        [material_id]
-      );
-      const nextBatchNumber = batchNumResult.rows[0].next_batch_number;
-
-      // 2. Insert new batch
-      await client.query(
-        `INSERT INTO material_stock_items (
-          material_id, supplier_name, quantity, price_bought, unit_price, created_at, batch_number, batch_status, purchase_date
-        ) VALUES ($1, $2, $3, $4, $5, NOW(), $6, 'active', $7)`,
-        [material_id, supplier_name, quantity, price_bought, unit_price, nextBatchNumber, purchase_date]
-      );
-
-      // 3. Update materials table quantity to sum of active batches
-      const totalQtyResult = await client.query(
-        `SELECT SUM(quantity) AS total_quantity
-         FROM material_stock_items
-         WHERE material_id = $1 AND batch_status = 'active'`,
-        [material_id]
-      );
-      const totalQuantity = totalQtyResult.rows[0].total_quantity || 0;
-      await client.query(
-        `UPDATE materials SET quantity = $1 WHERE material_id = $2`,
-        [totalQuantity, material_id]
-      );
-
-      await client.query('COMMIT');
-      res.status(201).json({ success: true, message: 'Material batch added successfully.' });
-    } catch (error) {
-      await client.query('ROLLBACK');
-      res.status(500).json({ success: false, message: 'Failed to add material batch', error: error.message });
-    } finally {
-      if (client) client.release();
-    }
-  });
-  // Add Material
+  // Add new material
   router.post('/add', upload.single('image'), async (req, res) => {
     const { material_name, unit, category } = req.body;
     const sku_code = Math.random().toString(36).substr(2, 8).toUpperCase();
     const image_path = req.file ? req.file.filename : null;
-    
+
     if (req.file) {
       const imagePath = path.join(__dirname, '../../public/images/materials', req.file.filename);
       await sharp(imagePath)
@@ -98,9 +50,136 @@ const materialRoutes = (pool) => {
       console.error('Error adding material:', err.message);
       res.status(500).json({ message: 'Error adding material' });
     } finally {
-      if (client) {
-        client.release();
+      if (client) client.release();
+    }
+  });
+
+  // Add a new stock batch
+  router.post('/add-stock', async (req, res) => {
+    const { material_id, supplier_name, quantity, price_bought, purchase_date } = req.body;
+    let client;
+    try {
+      client = await pool.connect();
+      await client.query('BEGIN');
+
+      // Get next batch number
+      const batchNumResult = await client.query(
+        `SELECT COALESCE(MAX(batch_number), 0) + 1 AS next_batch_number
+         FROM material_stock_items
+         WHERE material_id = $1`,
+        [material_id]
+      );
+      const nextBatchNumber = batchNumResult.rows[0].next_batch_number;
+
+      // Insert new batch
+      await client.query(
+        `INSERT INTO material_stock_items (material_id, supplier_name, quantity, price_bought, unit_price, created_at, batch_number, batch_status, purchase_date)
+         VALUES ($1,$2,$3,$4,$5,NOW(),$6,'active',$7)`,
+        [material_id, supplier_name, quantity, price_bought, price_bought / quantity, nextBatchNumber, purchase_date]
+      );
+
+      // Update material quantity (sum of active batches)
+      await client.query(
+        `UPDATE materials
+         SET quantity = (
+           SELECT COALESCE(SUM(quantity), 0)
+           FROM material_stock_items
+           WHERE material_id = $1 AND batch_status = 'active'
+         ),
+         unit_price = (
+           SELECT COALESCE(SUM(quantity * unit_price) / NULLIF(SUM(quantity),0),0)
+           FROM material_stock_items
+           WHERE material_id = $1 AND batch_status = 'active'
+         ),
+         updated_at = NOW()
+         WHERE material_id = $1`,
+        [material_id]
+      );
+
+      await client.query('COMMIT');
+      res.json({ success: true, message: 'Stock batch added successfully' });
+    } catch (error) {
+      await client.query('ROLLBACK');
+      console.error('Error adding stock batch:', error);
+      res.status(500).json({ success: false, message: error.message });
+    } finally {
+      if (client) client.release();
+    }
+  });
+
+  // Use material (FIFO)
+  router.post('/use-stock', async (req, res) => {
+    const { material_id, used_quantity } = req.body;
+    let client;
+    try {
+      client = await pool.connect();
+      await client.query('BEGIN');
+
+      let remaining = used_quantity;
+
+      const batches = await client.query(
+        `SELECT stock_id, quantity, batch_number
+         FROM material_stock_items
+         WHERE material_id = $1 AND batch_status = 'active'
+         ORDER BY batch_number ASC`,
+        [material_id]
+      );
+
+      const totalAvailable = batches.rows.reduce((sum, b) => sum + b.quantity, 0);
+      if (totalAvailable < used_quantity) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ success: false, message: 'Insufficient stock' });
       }
+
+      for (const batch of batches.rows) {
+        if (remaining <= 0) break;
+        const deduct = Math.min(batch.quantity, remaining);
+        const newQty = batch.quantity - deduct;
+        remaining -= deduct;
+
+        if (newQty <= 0) {
+          await client.query(
+            `UPDATE material_stock_items
+             SET quantity = 0, batch_status = 'inactive', updated_at = NOW()
+             WHERE stock_id = $1`,
+            [batch.stock_id]
+          );
+        } else {
+          await client.query(
+            `UPDATE material_stock_items
+             SET quantity = $1, updated_at = NOW()
+             WHERE stock_id = $2`,
+            [newQty, batch.stock_id]
+          );
+        }
+      }
+
+      // Update material quantity and weighted price
+      await client.query(
+        `UPDATE materials
+         SET quantity = (
+           SELECT COALESCE(SUM(quantity), 0)
+           FROM material_stock_items
+           WHERE material_id = $1 AND batch_status = 'active'
+         ),
+         unit_price = (
+           SELECT COALESCE(SUM(quantity * unit_price) / NULLIF(SUM(quantity),0),0)
+           FROM material_stock_items
+           WHERE material_id = $1 AND batch_status = 'active'
+         ),
+         updated_at = NOW()
+         WHERE material_id = $1`,
+        [material_id]
+      );
+
+      await client.query('COMMIT');
+      res.json({ success: true, message: 'Material used successfully' });
+    } catch (err) {
+      await client.query('ROLLBACK');
+      console.error('Error using stock:', err);
+      res.status(500).json({ success: false, message: err.message });
+    } finally {
+      if (client) client.release();
     }
   });
 

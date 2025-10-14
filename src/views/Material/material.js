@@ -24,6 +24,7 @@ const MaterialPage = () => {
   const [openNewStock, setOpenNewStock] = useState(false);
   const [openInvoiceList, setOpenInvoiceList] = useState(false);
   const [openMaterialForm, setOpenMaterialForm] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const handleAddNewStock = () => setOpenNewStock(true);
   const handleCloseNewStock = () => setOpenNewStock(false);
@@ -33,6 +34,20 @@ const MaterialPage = () => {
 
   const handleViewInvoice = () => setOpenInvoiceList(true);
   const handleCloseInvoiceList = () => setOpenInvoiceList(false);
+
+  // Handle successful material creation
+  const handleMaterialCreated = () => {
+    handleCloseMaterialForm();
+    // Trigger refresh of material list
+    setRefreshTrigger(prev => prev + 1);
+  };
+
+  // Handle successful stock addition
+  const handleStockAdded = () => {
+    handleCloseNewStock();
+    // Trigger refresh of material list to show updated quantities
+    setRefreshTrigger(prev => prev + 1);
+  };
 
   return (
     <Box
@@ -191,7 +206,7 @@ const MaterialPage = () => {
             boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
           }}
         >
-          <MaterialList maxItemsPerPage={16} />
+          <MaterialList refreshTrigger={refreshTrigger} maxItemsPerPage={16} />
         </Box>
       </Container>
 
@@ -237,7 +252,7 @@ const MaterialPage = () => {
           </IconButton>
         </DialogTitle>
         <DialogContent dividers sx={{ p: 3 }}>
-          <MaterialForm onSuccess={handleCloseMaterialForm} />
+          <MaterialForm onSuccess={handleMaterialCreated} />
         </DialogContent>
       </Dialog>
 
@@ -283,7 +298,7 @@ const MaterialPage = () => {
           </IconButton>
         </DialogTitle>
         <DialogContent dividers sx={{ p: 3 }}>
-          <NewStock />
+          <NewStock onStockAdded={handleStockAdded} />
         </DialogContent>
       </Dialog>
 

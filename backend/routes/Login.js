@@ -107,7 +107,7 @@ const loginRoutes = (pool) => {
                     return res.status(401).json({ message: 'Account is not active. Contact administrator.' });
                 }
 
-                // 🎯 ROLE-BASED ACCESS CONTROL
+                // 🎯 ROLE-BASED ACCESS CONTROL - Updated to match frontend RBAC
                 let accessRights = {};
                 const role = employee.role.toLowerCase();
 
@@ -118,69 +118,125 @@ const loginRoutes = (pool) => {
                     case 'trainer':
                         console.log('🎯 Setting Support/Trainer permissions');
                         accessRights = {
+                            dashboard: false,
                             timesheets: true,
                             projects: true,
-                            dashboard: false,
-                            reports: false,
-                            orders: false,
                             customers: false,
+                            orders: false,
                             products: false,
                             materials: false,
                             employees: false,
                             approval: false,
-                            everything: false
+                            reports: false,
+                            advertisement: false,
+                            everything: false,
+                            // Timesheet specific permissions
+                            timesheets_create: true,
+                            timesheets_view_own: true,
+                            timesheets_view_all: false,
+                            timesheets_approve: false,
+                            timesheets_reject: false,
+                            timesheets_edit_all: false
                         };
                         break;
                     
                     case 'accountant':
                         console.log('🎯 Setting Accountant permissions');
                         accessRights = {
+                            dashboard: true,
                             timesheets: true,
                             projects: false,
-                            dashboard: true,
-                            reports: true,
-                            orders: true,  // Accountants might need order access for financials
-                            customers: true, // Accountants might need customer access for billing
+                            customers: true,
+                            orders: true,
                             products: false,
                             materials: false,
                             employees: false,
                             approval: false,
-                            everything: false
+                            reports: true,
+                            advertisement: false,
+                            everything: false,
+                            // Timesheet specific permissions
+                            timesheets_create: true,
+                            timesheets_view_own: true,
+                            timesheets_view_all: false,
+                            timesheets_approve: false,
+                            timesheets_reject: false,
+                            timesheets_edit_all: false
                         };
                         break;
                     
                     case 'administrator':
-                    case 'admin':
                         console.log('🎯 Setting Administrator permissions');
                         accessRights = {
+                            dashboard: true,
                             timesheets: true,
                             projects: true,
-                            dashboard: true,
-                            reports: true,
-                            orders: true,
                             customers: true,
+                            orders: true,
                             products: true,
                             materials: true,
-                            employees: true,
-                            approval: true,
-                            everything: false  // Only super admin has everything
+                            employees: false, // Admins cannot manage employees
+                            approval: false,  // Admins cannot approve/reject timesheets
+                            reports: true,
+                            advertisement: true,
+                            everything: false,
+                            // Timesheet specific permissions
+                            timesheets_create: true,
+                            timesheets_view_own: true,
+                            timesheets_view_all: true,
+                            timesheets_approve: false,
+                            timesheets_reject: false,
+                            timesheets_edit_all: false
+                        };
+                        break;
+                    
+                    case 'admin':
+                        console.log('🎯 Setting Admin (restricted) permissions');
+                        accessRights = {
+                            dashboard: false,  // Admin cannot see dashboard
+                            timesheets: true,
+                            projects: true,
+                            customers: true,
+                            orders: false,     // Admin cannot see orders
+                            products: false,   // Admin cannot see products
+                            materials: false,  // Admin cannot see materials
+                            employees: false,
+                            approval: false,
+                            reports: true,
+                            advertisement: false, // Admin cannot see advertisement
+                            everything: false,
+                            // Timesheet specific permissions
+                            timesheets_create: true,
+                            timesheets_view_own: true,
+                            timesheets_view_all: true,
+                            timesheets_approve: false,
+                            timesheets_reject: false,
+                            timesheets_edit_all: false
                         };
                         break;
                     
                     default:
                         console.log('🎯 Setting default employee permissions for role:', role);
                         accessRights = {
+                            dashboard: false,
                             timesheets: true,
                             projects: false,
-                            dashboard: false,
-                            reports: false,
-                            orders: false,
                             customers: false,
+                            orders: false,
                             products: false,
                             materials: false,
                             employees: false,
                             approval: false,
-                            everything: false
+                            reports: false,
+                            advertisement: false,
+                            everything: false,
+                            // Timesheet specific permissions
+                            timesheets_create: true,
+                            timesheets_view_own: true,
+                            timesheets_view_all: false,
+                            timesheets_approve: false,
+                            timesheets_reject: false,
+                            timesheets_edit_all: false
                         };
                 }
 

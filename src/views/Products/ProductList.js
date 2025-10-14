@@ -29,7 +29,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import ProductUpdateModal from './ProductUpdateModal';
 import { API_BASE_URL } from '../../config';
 
-const ProductList = () => {
+const ProductList = ({ refreshTrigger }) => {
   const [products, setProducts] = useState([]); // Start with empty array
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -108,6 +108,13 @@ const ProductList = () => {
       })
       .catch(() => setMaterialsList([]));
   }, [statusFilter]);
+
+  // Watch for external refresh triggers
+  useEffect(() => {
+    if (refreshTrigger) {
+      fetchProducts();
+    }
+  }, [refreshTrigger]);
 
   // ✅ SAFE: Add safety check before filtering
   const filteredProducts = Array.isArray(products) ? products.filter(prod => {

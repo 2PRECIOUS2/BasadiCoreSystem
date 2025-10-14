@@ -39,7 +39,7 @@ function stringAvatar(name, color) {
   };
 }
 
-const EmployeesList = ({ onView, onEdit }) => {
+const EmployeesList = ({ onView, onEdit, refreshTrigger }) => {
   const [employees, setEmployees] = useState([]);
   const [anchorEls, setAnchorEls] = useState({});
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -64,6 +64,13 @@ const EmployeesList = ({ onView, onEdit }) => {
 useEffect(() => {
   fetchEmployees();
 }, []);
+
+// Refresh employees when refreshTrigger changes
+useEffect(() => {
+  if (refreshTrigger) {
+    fetchEmployees();
+  }
+}, [refreshTrigger]);
   // Refresh employees when toggling archived/active or after archive/restore
   const handleToggleArchived = () => {
     setShowArchived((prev) => !prev);

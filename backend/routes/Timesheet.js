@@ -1,17 +1,12 @@
 import express from 'express';
+import { checkTimesheetAccess } from '../middlewares/checkPermissions.js';
 
 const router = express.Router();
 
 const timesheetRoutes = (pool) => {
     
-    // Helper function to check if user is admin
-    const isAdmin = (req) => {
-        const userRole = req.session?.user?.role;
-        return ['super_admin', 'admin', 'administrator'].includes(userRole);
-    };
-
-    // GET /api/timesheets - Get all timesheets with proper filtering
-    router.get('/', async (req, res) => {
+    // GET /api/timesheets - Get timesheets based on user permissions
+    router.get('/', checkTimesheetAccess('view_own'), async (req, res) => {
         try {
             console.log('🔍 GET /api/timesheets - Request received');
             console.log('🔍 Session user:', req.session?.user);
@@ -19,20 +14,12 @@ const timesheetRoutes = (pool) => {
 
             const { employee_id, project_id, status, date_from, date_to, limit = 50, offset = 0 } = req.query;
             
-            // Check if user is authenticated
-            if (!req.session?.user) {
-                console.log('❌ No user session found');
-                return res.status(401).json({
-                    success: false,
-                    message: 'User not authenticated'
-                });
-            }
-
             const currentUser = req.session.user;
-            const userIsAdmin = isAdmin({ session: { user: currentUser } });
+            const canViewAll = req.userCanViewAll;
+            const currentUserId = req.currentUserId;
             
             console.log('🔍 User role:', currentUser.role);
-            console.log('🔍 Is admin:', userIsAdmin);
+            console.log('🔍 Can view all:', canViewAll);
 
             // Build the main query with correct table joins
             let query = `
@@ -69,19 +56,25 @@ const timesheetRoutes = (pool) => {
             let paramIndex = 1;
 
             // Role-based filtering
-            if (!userIsAdmin) {
-                // Non-admin users can only see their own timesheets
+            if (!canViewAll) {
+                // Users who can't view all can only see their own timesheets
                 const userEmployeeId = currentUser.employeeId || currentUser.employee_id || currentUser.id;
                 query += ` AND t.employee_id = $${paramIndex}`;
                 queryParams.push(userEmployeeId);
                 paramIndex++;
-                console.log('🔍 Filtering for employee_id:', userEmployeeId);
+                console.log('🔍 Non-admin user - Filtering for employee_id:', userEmployeeId);
+                console.log('🔍 Available user fields:', Object.keys(currentUser));
+                console.log('🔍 User data:', JSON.stringify(currentUser, null, 2));
+                console.log('🔍 canViewAll:', canViewAll);
+                console.log('🔍 userRole:', currentUser.role);
             } else if (employee_id) {
-                // Admin can filter by specific employee
+                // Users who can view all can filter by specific employee
                 query += ` AND t.employee_id = $${paramIndex}`;
                 queryParams.push(parseInt(employee_id));
                 paramIndex++;
-                console.log('🔍 Admin filtering for employee_id:', employee_id);
+                console.log('🔍 Admin user - Filtering for specific employee_id:', employee_id);
+            } else {
+                console.log('🔍 Admin user - No employee filter, showing all timesheets');
             }
 
             // Additional filters
@@ -122,6 +115,7 @@ const timesheetRoutes = (pool) => {
             
             console.log('✅ Query executed successfully');
             console.log('✅ Found', result.rows.length, 'timesheets');
+            console.log('📋 First timesheet raw data:', JSON.stringify(result.rows[0], null, 2));
 
             // Get total count for pagination
             let countQuery = `
@@ -134,7 +128,7 @@ const timesheetRoutes = (pool) => {
             let countParamIndex = 1;
 
             // Apply same filters to count query
-            if (!userIsAdmin) {
+            if (!canViewAll) {
                 const userEmployeeId = currentUser.employeeId || currentUser.employee_id || currentUser.id;
                 countQuery += ` AND t.employee_id = $${countParamIndex}`;
                 countParams.push(userEmployeeId);
@@ -174,6 +168,12 @@ const timesheetRoutes = (pool) => {
 
             console.log('✅ Total count:', totalCount);
 
+            console.log('📤 Sending response data:', JSON.stringify({
+                success: true,
+                data: result.rows,
+                count: totalCount
+            }, null, 2));
+
             res.json({
                 success: true,
                 data: result.rows,
@@ -198,7 +198,7 @@ const timesheetRoutes = (pool) => {
     });
 
     // POST /api/timesheets - Create new timesheet
-    router.post('/', async (req, res) => {
+    router.post('/', checkTimesheetAccess('create'), async (req, res) => {
         try {
             console.log('🔍 POST /api/timesheets - Create timesheet request');
             console.log('🔍 Session user data:', req.session?.user);
@@ -208,13 +208,8 @@ const timesheetRoutes = (pool) => {
             
             // Get employee_id from session
             const user = req.session.user;
-            if (!user) {
-                return res.status(401).json({
-                    success: false,
-                    message: 'User not authenticated'
-                });
-            }
-
+            
+            // Note: Super admin cannot create timesheets (handled by middleware)
             // Use employee_id from session (multiple possible field names)
             const employee_id = user.employeeId || user.employee_id || user.id;
             
@@ -290,6 +285,100 @@ const timesheetRoutes = (pool) => {
         }
     });
 
+    // PUT /api/timesheets/:id - Update timesheet
+    router.put('/:id', checkTimesheetAccess('edit'), async (req, res) => {
+        try {
+            const timesheetId = req.params.id;
+            const currentUser = req.session?.user;
+            const { date, start_time, end_time, break_duration = 0, work_done, project_id = null, total_hours } = req.body;
+
+            console.log('🔍 PUT /api/timesheets/:id - Update timesheet request');
+            console.log('🔍 Session user data:', currentUser);
+            console.log('🔍 Request body:', req.body);
+
+            if (!currentUser) {
+                return res.status(401).json({
+                    success: false,
+                    message: 'User not authenticated'
+                });
+            }
+
+            // Get the timesheet first
+            const timesheetResult = await pool.query(
+                'SELECT * FROM timesheets WHERE id = $1',
+                [timesheetId]
+            );
+
+            if (timesheetResult.rows.length === 0) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Timesheet not found'
+                });
+            }
+
+            const timesheet = timesheetResult.rows[0];
+            const userEmployeeId = currentUser.employeeId || currentUser.employee_id || currentUser.id;
+
+            // Check if user owns this timesheet or is admin
+            const userIsAdmin = currentUser.role === 'super_admin' || currentUser.role === 'admin';
+            if (!userIsAdmin && timesheet.employee_id !== userEmployeeId) {
+                return res.status(403).json({
+                    success: false,
+                    message: 'You can only edit your own timesheets'
+                });
+            }
+
+            // Check if timesheet can be edited
+            if (!['draft', 'rejected'].includes(timesheet.status)) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Cannot edit timesheet with status: ${timesheet.status}`
+                });
+            }
+
+            // Update timesheet
+            const result = await pool.query(
+                `UPDATE timesheets 
+                 SET date = $1, start_time = $2, end_time = $3, break_duration = $4, 
+                     work_done = $5, project_id = $6, total_hours = $7, updated_at = CURRENT_TIMESTAMP
+                 WHERE id = $8 
+                 RETURNING *`,
+                [date, start_time, end_time, break_duration, work_done, project_id, total_hours, timesheetId]
+            );
+
+            console.log('✅ Timesheet updated successfully');
+
+            res.json({
+                success: true,
+                data: result.rows[0],
+                message: 'Timesheet updated successfully'
+            });
+
+        } catch (error) {
+            console.error('❌ Error updating timesheet:', error);
+            
+            if (error.code === '23505') { // Unique violation
+                return res.status(409).json({
+                    success: false,
+                    message: 'Timesheet already exists for this date'
+                });
+            }
+            
+            if (error.code === '23503') { // Foreign key violation
+                return res.status(400).json({
+                    success: false,
+                    message: 'Invalid employee_id or project_id'
+                });
+            }
+
+            res.status(500).json({
+                success: false,
+                message: 'Failed to update timesheet',
+                error: process.env.NODE_ENV === 'development' ? error.message : undefined
+            });
+        }
+    });
+
     // POST /api/timesheets/:id/submit - Submit timesheet for approval
     router.post('/:id/submit', async (req, res) => {
         try {
@@ -323,7 +412,7 @@ const timesheetRoutes = (pool) => {
             const userEmployeeId = currentUser.employeeId || currentUser.employee_id || currentUser.id;
 
             // Check if user owns this timesheet or is admin
-            const userIsAdmin = isAdmin({ session: { user: currentUser } });
+            const userIsAdmin = currentUser.role === 'super_admin' || currentUser.role === 'admin';
             if (!userIsAdmin && timesheet.employee_id !== userEmployeeId) {
                 return res.status(403).json({
                     success: false,
@@ -361,6 +450,133 @@ const timesheetRoutes = (pool) => {
             res.status(500).json({
                 success: false,
                 message: 'Failed to submit timesheet',
+                error: process.env.NODE_ENV === 'development' ? error.message : undefined
+            });
+        }
+    });
+
+    // POST /api/timesheets/:id/approve - Approve timesheet (Super admin only)
+    router.post('/:id/approve', checkTimesheetAccess('approve'), async (req, res) => {
+        try {
+            const timesheetId = req.params.id;
+            const currentUser = req.session.user;
+
+            console.log('🔍 Approving timesheet ID:', timesheetId);
+            console.log('🔍 Current user:', currentUser.role);
+
+            // Get the timesheet first
+            const timesheetResult = await pool.query(
+                'SELECT * FROM timesheets WHERE id = $1',
+                [timesheetId]
+            );
+
+            if (timesheetResult.rows.length === 0) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Timesheet not found'
+                });
+            }
+
+            const timesheet = timesheetResult.rows[0];
+
+            // Check if timesheet is in submitted status
+            if (timesheet.status !== 'submitted') {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Only submitted timesheets can be approved'
+                });
+            }
+
+            // Update timesheet status to approved
+            const result = await pool.query(
+                `UPDATE timesheets 
+                 SET status = 'approved', approved_at = NOW(), approved_by = $1, updated_at = NOW()
+                 WHERE id = $2
+                 RETURNING *`,
+                [currentUser.id, timesheetId]
+            );
+
+            console.log('✅ Timesheet approved successfully');
+
+            res.json({
+                success: true,
+                data: result.rows[0],
+                message: 'Timesheet approved successfully'
+            });
+
+        } catch (error) {
+            console.error('❌ Error approving timesheet:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Failed to approve timesheet',
+                error: process.env.NODE_ENV === 'development' ? error.message : undefined
+            });
+        }
+    });
+
+    // POST /api/timesheets/:id/reject - Reject timesheet (Super admin only)
+    router.post('/:id/reject', checkTimesheetAccess('reject'), async (req, res) => {
+        try {
+            const timesheetId = req.params.id;
+            const currentUser = req.session.user;
+            const { rejection_reason } = req.body;
+
+            console.log('🔍 Rejecting timesheet ID:', timesheetId);
+            console.log('🔍 Current user:', currentUser.role);
+            console.log('🔍 Rejection reason:', rejection_reason);
+
+            if (!rejection_reason) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Rejection reason is required'
+                });
+            }
+
+            // Get the timesheet first
+            const timesheetResult = await pool.query(
+                'SELECT * FROM timesheets WHERE id = $1',
+                [timesheetId]
+            );
+
+            if (timesheetResult.rows.length === 0) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Timesheet not found'
+                });
+            }
+
+            const timesheet = timesheetResult.rows[0];
+
+            // Check if timesheet is in submitted status
+            if (timesheet.status !== 'submitted') {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Only submitted timesheets can be rejected'
+                });
+            }
+
+            // Update timesheet status to rejected
+            const result = await pool.query(
+                `UPDATE timesheets 
+                 SET status = 'rejected', rejection_reason = $1, approved_by = $2, updated_at = NOW()
+                 WHERE id = $3
+                 RETURNING *`,
+                [rejection_reason, currentUser.id, timesheetId]
+            );
+
+            console.log('✅ Timesheet rejected successfully');
+
+            res.json({
+                success: true,
+                data: result.rows[0],
+                message: 'Timesheet rejected successfully'
+            });
+
+        } catch (error) {
+            console.error('❌ Error rejecting timesheet:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Failed to reject timesheet',
                 error: process.env.NODE_ENV === 'development' ? error.message : undefined
             });
         }

@@ -213,7 +213,7 @@ const ViewEmployee = ({ employee, onClose }) => {
                     💼 {employee.employment_type} • {employee.employment_status}
                   </Typography>
                   <Typography variant="body1" sx={{ opacity: 0.9 }}>
-                    💰 R{employee.hourly_rate}/hour
+                     R{employee.hourly_rate}/hour
                   </Typography>
                 </CardContent>
               </Card>
@@ -281,7 +281,7 @@ const ViewEmployee = ({ employee, onClose }) => {
                 </Typography>
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                   <Typography variant="body1">
-                    💰 <strong>Hourly Rate:</strong> R{employee.hourly_rate}
+                     <strong>Hourly Rate:</strong> R{employee.hourly_rate}
                   </Typography>
                   <Typography variant="body1">
                     📋 <strong>Employment Type:</strong> {employee.employment_type}

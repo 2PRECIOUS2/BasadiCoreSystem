@@ -6,12 +6,17 @@
   "scripts": {
     "start": "node Server.js",
     "dev": "nodemon Server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "postinstall": "npm rebuild sharp"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
   "dependencies": {
     "@sendgrid/mail": "^8.1.6",
     "bcrypt": "^6.0.0",
@@ -21,11 +26,15 @@
     "express": "^5.1.0",
     "express-session": "^1.18.2",
     "multer": "^2.0.2",
+    "node-cron": "^4.2.1",
     "node-fetch": "^3.3.2",
-    "nodemailer": "^7.0.6",
+    "nodemailer": "^7.0.7",
     "pdfkit": "^0.17.2",
     "pg": "^8.16.3",
     "sharp": "^0.34.4",
     "uuid": "^13.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
   }
 }

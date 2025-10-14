@@ -1,5 +1,6 @@
-const bcrypt = require('bcrypt');
-const { Pool } = require('pg');
+import bcrypt from 'bcrypt';
+import pkg from 'pg';
+const { Pool } = pkg;
 
 // Adjust this to match your .env or use environment variables
 const pool = new Pool({

@@ -79,7 +79,7 @@ const withRoleProtection = (WrappedComponent, requiredPermission) => {
                 }
               }}
             >
-              Go to Dashboard
+              Go to Accessible Page
             </Button>
           </Paper>
         </Box>

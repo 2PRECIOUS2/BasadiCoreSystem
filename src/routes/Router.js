@@ -8,6 +8,9 @@ import orders from '../views/Orders/orders';
 import AddOrdersForm from '../views/Orders/AddOrdersForm';
 import EmployeesPage from '../views/Employees/EmployeesPage';
 import { useNavigate } from 'react-router-dom';
+import withRoleProtection from '../components/shared/withRoleProtection';
+import DefaultRouteRedirect from '../components/shared/DefaultRouteRedirect';
+
 /* ***Layouts**** */
 const FullLayout = Loadable(lazy(() => import('../layouts/full/FullLayout')));
 const BlankLayout = Loadable(lazy(() => import('../layouts/blank/BlankLayout')));
@@ -31,23 +34,35 @@ const Login = Loadable(lazy(() => import('../views/authentication/Login')));
 const Advertisement = Loadable(lazy(() => import('../views/Advertisement/Advertisement')));
 const Timesheet = Loadable(lazy(() => import('../views/TimeSheet/TimeSheetPage')));
 
+// Create protected components
+const ProtectedDashboard = withRoleProtection(Dashboard, 'dashboard');
+const ProtectedMaterial = withRoleProtection(Material, 'materials');
+const ProtectedProducts = withRoleProtection(ProductPage, 'products');
+const ProtectedCustomers = withRoleProtection(CustomersPage, 'customers');
+const ProtectedOrders = withRoleProtection(Orders, 'orders');
+const ProtectedEmployees = withRoleProtection(Employees, 'employees');
+const ProtectedProjects = withRoleProtection(Projects, 'projects');
+const ProtectedAdvertisement = withRoleProtection(Advertisement, 'advertisement');
+const ProtectedTimesheet = withRoleProtection(Timesheet, 'timesheets');
+const ProtectedAddOrderForm = withRoleProtection(AddOrdersForm, 'orders');
+
 const Router = [
   {
     path: '/',
     element: <FullLayout />,
     children: [
-      { index: true, element: <Navigate to="/dashboard" /> },
-      { path: 'dashboard', exact: true, element: <Dashboard /> },
-       { path: 'Material', exact: true, element: <Material /> },
-      { path: 'Products', exact: true, element: <ProductPage /> },
+      { index: true, element: <DefaultRouteRedirect /> },
+      { path: 'dashboard', exact: true, element: <ProtectedDashboard /> },
+       { path: 'Material', exact: true, element: <ProtectedMaterial /> },
+      { path: 'Products', exact: true, element: <ProtectedProducts /> },
       // --- NEW ROUTES FOR BASADI CORE ---
-      {path: 'Customers', exact: true, element: <CustomersPage /> },
-      { path: 'Orders', exact: true, element: <Orders /> },
-      { path: 'Orders/AddOrderForm', exact: true, element: <AddOrdersForm /> },
-  { path: 'Employees', exact: true, element: <Employees/> },
-  { path: 'Projects', exact: true, element: <Projects /> },
-      {path: 'Advertisement', exact: true, element: <Advertisement /> },
-      {path: 'Timesheet', exact: true, element: <Timesheet /> },
+      {path: 'Customers', exact: true, element: <ProtectedCustomers /> },
+      { path: 'Orders', exact: true, element: <ProtectedOrders /> },
+      { path: 'Orders/AddOrderForm', exact: true, element: <ProtectedAddOrderForm /> },
+  { path: 'Employees', exact: true, element: <ProtectedEmployees /> },
+  { path: 'Projects', exact: true, element: <ProtectedProjects /> },
+      {path: 'Advertisement', exact: true, element: <ProtectedAdvertisement /> },
+      {path: 'Timesheet', exact: true, element: <ProtectedTimesheet /> },
       //{ path: '/sample-page', exact: true, element: <SamplePage /> },
      // { path: '/icons', exact: true, element: <Icons /> },
       //{ path: '/ui/typography', exact: true, element: <TypographyPage /> },

@@ -72,6 +72,7 @@ export function Projects() {
   const [openCreate, setOpenCreate] = useState(false);
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const [openView, setOpenView] = useState(false);
@@ -128,12 +129,23 @@ const handleSaveEdit = () => {
   setSnackbar({ open: true, message: 'Project updated successfully!', severity: 'success' });
 };
   // After project creation, close dialog and refresh list
-  const handleSaveProject = () => {
+  const handleSaveProject = async (newProject) => {
     setOpenCreate(false);
-    setTimeout(() => {
-      fetchProjects();
-      setSnackbar({ open: true, message: 'Project created successfully!', severity: 'success' });
-    }, 800); // Wait for backend to update, adjust as needed
+    setRefreshing(true);
+    try {
+      // Refresh the projects list immediately after successful creation
+      await fetchProjects();
+      setSnackbar({ 
+        open: true, 
+        message: `Project "${newProject?.title || newProject?.projectName || 'New project'}" created and list updated successfully!`, 
+        severity: 'success' 
+      });
+    } catch (error) {
+      console.error('Error refreshing projects:', error);
+      setSnackbar({ open: true, message: 'Project created but failed to refresh list. Please refresh manually.', severity: 'warning' });
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   const handleViewProject = (project) => {
@@ -354,7 +366,7 @@ const handleCloseView = () => setOpenView(false);
           border: '1px solid rgba(255,255,255,0.2)',
           minHeight: '400px'
         }}>
-          {loading ? (
+          {loading || refreshing ? (
             <Box sx={{ 
               display: 'flex', 
               justifyContent: 'center', 
@@ -372,7 +384,7 @@ const handleCloseView = () => setOpenView(false);
                 <WorkIcon sx={{ fontSize: 40 }} />
               </Avatar>
               <Typography variant="h6" sx={{ color: '#64748b' }}>
-                Loading projects...
+                {refreshing ? 'Updating projects...' : 'Loading projects...'}
               </Typography>
             </Box>
           ) : error ? (
