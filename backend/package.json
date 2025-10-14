@@ -7,7 +7,7 @@
     "start": "node Server.js",
     "dev": "nodemon Server.js",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "postinstall": "npm rebuild sharp"
+    "postinstall": "npm rebuild sharp && npm --prefix .. ci && npm --prefix .. run build"
   },
   "keywords": [],
   "author": "",

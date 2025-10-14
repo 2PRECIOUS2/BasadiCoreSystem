@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import session from 'express-session';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import dbModule from './db/index.js';
 
@@ -213,13 +214,22 @@ app.post('/api/logout', (req, res) => {
 // Serve images from the public directory
 app.use('/images', express.static(path.join(__dirname, 'public/images')));
 
-const clientBuildPath = path.resolve(__dirname, '../build');
-app.use(express.static(clientBuildPath));
+const buildCandidates = [
+  path.resolve(__dirname, '../build'),
+  path.resolve(__dirname, '../dist')
+];
+const clientBuildPath = buildCandidates.find((candidatePath) => fs.existsSync(candidatePath));
 
-app.get('*', (req, res, next) => {
-  if (req.path.startsWith('/api')) return next();
-  res.sendFile(path.join(clientBuildPath, 'index.html'));
-});
+if (clientBuildPath) {
+  app.use(express.static(clientBuildPath));
+
+  // Fallback to index.html for non-API GET requests (Express 5-safe)
+  app.get(/^\/(?!api).*/, (req, res) => {
+    res.sendFile(path.join(clientBuildPath, 'index.html'));
+  });
+} else {
+  console.warn(`[static] No frontend build found. Checked: ${buildCandidates.join(', ')}. Skipping static file serving.`);
+}
 
 // ---------------------- Cron jobs ----------------------
 orderStatusUpdate(dbModule.pool);
