@@ -137,7 +137,7 @@ app.get('/api/check-session', (req, res) => {
     });
 });
 
-app.use(requireLogin);
+app.use('/api', requireLogin);
 
 // ---------------------- Routes ----------------------
 app.use('/api/login', loginRoutes(dbModule.pool));
@@ -213,11 +213,19 @@ app.post('/api/logout', (req, res) => {
 // Serve images from the public directory
 app.use('/images', express.static(path.join(__dirname, 'public/images')));
 
+const clientBuilPath = path.resolve(__dirname, '../build');
+app.use(express.static(clientBuildPath));
+
+app.get('*', (req, res, next) => {
+  if (req.path.startsWith('/api')) return next();
+  req.sendFile(path.join(clientBuildPath, 'index.html'));
+});
+
 // ---------------------- Cron jobs ----------------------
 orderStatusUpdate(dbModule.pool);
 
 // Basic test route
-app.get('/', (req, res) => {
+app.get('/api/health', (req, res) => {
   res.json({ 
     message: 'BasadiCore Backend API is running!', 
     timestamp: new Date().toISOString(),
