@@ -39,6 +39,7 @@ const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:3000',
   'https://basadicoresystem-1.onrender.com', // <--- Add your deployed frontend
+  'https://basadicoresystem.onrender.com',      // if frontend is same domain
   process.env.FRONTEND_URL
 ].filter(Boolean);
 
