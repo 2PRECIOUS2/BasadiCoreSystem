@@ -48,8 +48,8 @@ export default defineConfig({
     //   exportAsDefault: true
     // })],
 
-    plugins: [react(), svgr()],
-    base: '/',
+    plugins: [svgr(), react()],
+    base: './',
     build: {
         outDir: 'dist',
         sourcemap: false,
