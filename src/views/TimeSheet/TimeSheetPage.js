@@ -317,16 +317,41 @@ const TimeSheetPage = () => {
 
     // DataGrid columns
     const columns = [
-        { field: 'date', headerName: 'Date', width: 120, headerAlign: 'center', align: 'center' },
-        { field: 'employee_id', headerName: 'Employee ID', width: 120, headerAlign: 'center', align: 'center' },
-        { field: 'start_time', headerName: 'Start Time', width: 120, headerAlign: 'center', align: 'center' },
-        { field: 'end_time', headerName: 'End Time', width: 120, headerAlign: 'center', align: 'center' },
-        { field: 'total_hours', headerName: 'Total Hours', width: 120, headerAlign: 'center', align: 'center' },
-        { field: 'status', headerName: 'Status', width: 120, headerAlign: 'center', align: 'center' },
+        { 
+            field: 'date', 
+            headerName: 'Date', 
+            width: 150, 
+            headerAlign: 'center', 
+            align: 'center',
+            renderCell: (params) => {
+                // Format date to YYYY-MM-DD
+                if (params.value) {
+                    const date = new Date(params.value);
+                    return date.toISOString().split('T')[0]; // This gives YYYY-MM-DD format
+                }
+                return params.value;
+            }
+        },
+        { field: 'employee_id', headerName: 'Employee ID', width: 150, headerAlign: 'center', align: 'center' },
+        { field: 'start_time', headerName: 'Start Time', width: 150, headerAlign: 'center', align: 'center' },
+        { field: 'end_time', headerName: 'End Time', width: 150, headerAlign: 'center', align: 'center' },
+        { field: 'total_hours', headerName: 'Total Hours', width: 150, headerAlign: 'center', align: 'center' },
+        { 
+            field: 'status', 
+            headerName: 'Status', 
+            width: 150, 
+            headerAlign: 'center', 
+            align: 'center',
+            renderCell: (params) => {
+                return getStatusChip(params.value);
+            }
+        },
         {
             field: 'actions',
             headerName: 'Actions',
-            width: 200,
+            width: 180,
+            headerAlign: 'center',
+            align: 'center',
             sortable: false,
             renderCell: (params) => {
                 if (!params || !params.row) return null;
@@ -396,7 +421,12 @@ const TimeSheetPage = () => {
 
     return (
         <PageContainer title="Timesheets" description="Manage employee timesheets">
-            <Box>
+            <Box sx={{ 
+                maxWidth: '1400px', 
+                mx: 'auto', 
+                px: { xs: 2, sm: 3, md: 4 },
+                py: 2
+            }}>
                 {/* Enhanced Header */}
                 <Paper sx={{ 
                     p: 4, 
@@ -629,8 +659,14 @@ const TimeSheetPage = () => {
                 {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
 
                 {/* Enhanced Data Grid */}
-                <Card sx={{ borderRadius: 3, overflow: 'hidden', boxShadow: '0 8px 32px rgba(0,0,0,0.1)' }}>
-                    <Box height={600}>
+                <Card sx={{ 
+                    borderRadius: 3, 
+                    overflow: 'hidden', 
+                    boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
+                    mx: 'auto',
+                    maxWidth: '100%'
+                }}>
+                    <Box>
                         <DataGrid
                             rows={timesheets}
                             columns={columns}
@@ -640,12 +676,17 @@ const TimeSheetPage = () => {
                             disableSelectionOnClick
                             autoHeight
                             sx={{
+                                minHeight: 400,
                                 '& .MuiDataGrid-root': {
                                     border: 'none',
                                 },
                                 '& .MuiDataGrid-cell': {
                                     borderBottom: '1px solid #f0f0f0',
                                     fontSize: '0.9rem',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    padding: '12px 8px',
                                 },
                                 '& .MuiDataGrid-columnHeaders': {
                                     backgroundColor: '#f8f9fa',
@@ -654,17 +695,30 @@ const TimeSheetPage = () => {
                                     fontWeight: 'bold',
                                     '& .MuiDataGrid-columnHeaderTitle': {
                                         fontWeight: 'bold',
-                                        color: '#2d3748'
+                                        color: '#2d3748',
+                                        textAlign: 'center'
+                                    },
+                                    '& .MuiDataGrid-columnHeader': {
+                                        display: 'flex',
+                                        justifyContent: 'center',
+                                        alignItems: 'center'
                                     }
                                 },
                                 '& .MuiDataGrid-row': {
                                     '&:hover': {
                                         backgroundColor: '#f8f9fa',
+                                    },
+                                    '&:nth-of-type(even)': {
+                                        backgroundColor: '#fafafa',
                                     }
                                 },
                                 '& .MuiDataGrid-footerContainer': {
                                     borderTop: '2px solid #e0e0e0',
-                                    backgroundColor: '#f8f9fa'
+                                    backgroundColor: '#f8f9fa',
+                                    justifyContent: 'center'
+                                },
+                                '& .MuiDataGrid-virtualScroller': {
+                                    backgroundColor: '#fff'
                                 }
                             }}
                         />

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { TextField, Button, Grid, MenuItem, Typography, IconButton, Stack, Snackbar, Alert } from '@mui/material';
+import { TextField, Button, Grid, MenuItem, Typography, IconButton, Stack, Snackbar, Alert, Autocomplete } from '@mui/material';
 import { Add, Remove } from '@mui/icons-material';
 import { API_BASE_URL } from '../../config';
 
@@ -37,7 +37,7 @@ const NewStock = ({ onStockAdded }) => {
       if (numValue > 2000) {
         setSnackbar({
           open: true,
-            message: 'Maximum 2000 units allowed',
+          message: 'Maximum 2000 units allowed',
           severity: 'warning'
         });
         return; // Don't update if exceeds limit
@@ -148,22 +148,37 @@ const NewStock = ({ onStockAdded }) => {
       {stockItems.map((item, index) => (
         <Grid container spacing={3} key={index} alignItems="center" sx={{ mb: 2 }}>
           <Grid item xs={3}>
-            <TextField
-              select
-              label={<span style={{ fontWeight: 700 }}><Add sx={{ fontSize: 20, color: '#1976d2', mr: 0.5 }} />Select Material</span>}
-              fullWidth
-              value={item.material_id}
-              onChange={(e) => handleChange(index, 'material_id', e.target.value)}
-              InputProps={{ sx: { fontSize: 20, height: 56, fontWeight: 700 } }}
-              InputLabelProps={{ sx: { fontSize: 20, fontWeight: 700 } }}
-              required
-            >
-              {materials.map((mat) => (
-                <MenuItem key={mat.material_id} value={mat.material_id} sx={{ fontSize: 20, fontWeight: 700 }}>
-                  {mat.material_name} {mat.unit ? `(${mat.unit})` : ''}
-                </MenuItem>
-              ))}
-            </TextField>
+            <Autocomplete
+              value={materials.find(mat => mat.material_id === item.material_id) || null}
+              onChange={(event, newValue) => {
+                handleChange(index, 'material_id', newValue ? newValue.material_id : '');
+              }}
+              options={materials}
+              getOptionLabel={(option) => `${option.material_name} ${option.unit ? `(${option.unit})` : ''}`}
+              isOptionEqualToValue={(option, value) => option.material_id === value.material_id}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label={<span style={{ fontWeight: 700 }}><Add sx={{ fontSize: 20, color: '#1976d2', mr: 0.5 }} />Select Material</span>}
+                  placeholder="Search materials..."
+                  InputProps={{
+                    ...params.InputProps,
+                    sx: { fontSize: 20, fontWeight: 700 }
+                  }}
+                  InputLabelProps={{ sx: { fontSize: 20, fontWeight: 700 } }}
+                  required
+                />
+              )}
+              renderOption={(props, option) => (
+                <li {...props} key={option.material_id} style={{ fontSize: 20, fontWeight: 700 }}>
+                  {option.material_name} {option.unit ? `(${option.unit})` : ''}
+                </li>
+              )}
+              sx={{
+                '& .MuiAutocomplete-popupIndicator': { color: '#1976d2' },
+                '& .MuiAutocomplete-clearIndicator': { color: '#1976d2' }
+              }}
+            />
           </Grid>
 
           <Grid item xs={3}>
@@ -190,7 +205,7 @@ const NewStock = ({ onStockAdded }) => {
                 min: 1,
                 max: 2000,
                 onInput: (e) => {
-                  // Prevent typing more than 200
+                  // Prevent typing more than 2000
                   if (parseInt(e.target.value) > 2000) {
                     e.target.value = 2000;
                   }

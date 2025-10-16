@@ -11,7 +11,7 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import PageContainer from 'src/components/container/PageContainer';
 import DashboardCard from '../../components/shared/DashboardCard';
-import CustomerForm from './CustomerForm';
+import CustomerForm from './CustomerForm'; 
 import CustomersList from './CustomersList';
 import { API_BASE_URL } from '../../config';
 import withRoleProtection from '../../components/shared/withRoleProtection';

@@ -253,16 +253,16 @@ router.get('/:id', async (req, res) => {
 
   // Update project
   router.put('/:id', async (req, res) => {
-    const { startDate, deadline, location, partner, additionalNotes, tasks } = req.body;
+    const { title, startDate, deadline, location, partner, additionalNotes, tasks } = req.body;
     const projectId = req.params.id;
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
       await client.query(
         `UPDATE projects 
-         SET start_date=$1, deadline=$2, location=$3, partner=$4, additional_notes=$5 
-         WHERE project_id=$6`,
-        [startDate, deadline, location, partner, additionalNotes, projectId]
+         SET project_name=$1, start_date=$2, deadline=$3, location=$4, partner=$5, additional_notes=$6 
+         WHERE project_id=$7`,
+        [title, startDate, deadline, location, partner, additionalNotes, projectId]
       );
 
       await client.query(`DELETE FROM project_tasks WHERE project_id=$1`, [projectId]);

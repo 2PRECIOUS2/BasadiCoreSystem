@@ -1,4 +1,5 @@
 import express from 'express';
+import { v4 as uuidv4 } from 'uuid';
 const router = express.Router();
 
 const productionRouter = (pool) => {
@@ -12,7 +13,7 @@ const productionRouter = (pool) => {
       production_date,
       materials_used,
       provider_id,
-      cost_of_production // <-- Accept from frontend
+      cost_of_production
     } = req.body;
 
     let client;
@@ -39,7 +40,7 @@ const productionRouter = (pool) => {
         }
       }
 
-      // 2. Calculate cost of production (prefer frontend value if provided)
+      // 2. Calculate cost of production
       let costOfProduction = 0;
       if (typeof cost_of_production !== 'undefined' && cost_of_production !== null) {
         costOfProduction = parseFloat(cost_of_production);
@@ -53,7 +54,7 @@ const productionRouter = (pool) => {
       console.log('costOfProduction:', costOfProduction);
       console.log('totalCost:', totalCost);
 
-      // 3. Insert production record
+      // 3. Insert production record ONLY
       const productionResult = await client.query(`
         INSERT INTO production (
           product_id,
@@ -71,29 +72,9 @@ const productionRouter = (pool) => {
 
       const production = productionResult.rows[0];
 
-      // 3.5. Insert product materials if production method is 'scratch'
-      if (production_method === 'scratch' && materials_used) {
-        for (const material of materials_used) {
-          console.log(`📝 Inserting product material: ${material.material_id} for product ${product_id}`);
-          
-          await client.query(`
-            INSERT INTO product_materials (
-              production_id, 
-              product_id, 
-              material_id, 
-              measurement, 
-              unit
-            ) VALUES ($1, $2, $3, $4, $5)
-          `, [
-            production.production_id, 
-            product_id, 
-            material.material_id, 
-            material.measurement, 
-            material.unit || 'items'
-          ]);
-        }
-        console.log(`✅ Inserted ${materials_used.length} product materials for product ${product_id}`);
-      }
+      // ❌ REMOVED: No longer inserting into product_materials during production
+      // Materials are already stored when product was created
+      // We only fetch them via the /api/products/:productId/materials endpoint
 
       // 4. Update product cost and quantity
       await client.query(`
@@ -102,87 +83,29 @@ const productionRouter = (pool) => {
         WHERE product_id = $3
       `, [costOfProduction, quantity, product_id]);
 
-      // 5. Deduct materials from stock using FIFO (First In, First Out)
+      // 5. Simple material deduction from materials table only
       if (production_method === 'scratch' && materials_used) {
         for (const material of materials_used) {
           const totalMaterialNeeded = material.measurement * quantity;
-          let remainingToDeduct = totalMaterialNeeded;
-
+          
           console.log(`🔧 Deducting ${totalMaterialNeeded} from material ${material.material_id}`);
 
-          // Get active batches for this material, ordered by batch_number (FIFO)
-          const batchesResult = await client.query(`
-            SELECT id, quantity, unit_price, batch_number
-            FROM material_stock_items
-            WHERE material_id = $1 AND batch_status = 'active' AND quantity > 0
-            ORDER BY batch_number ASC
+          // Get current material quantity
+          const currentMaterialResult = await client.query(`
+            SELECT quantity FROM materials WHERE material_id = $1
           `, [material.material_id]);
 
-          // Deduct from batches using FIFO
-          for (const batch of batchesResult.rows) {
-            if (remainingToDeduct <= 0) break;
+          const currentQuantity = currentMaterialResult.rows[0].quantity;
+          const newQuantity = currentQuantity - totalMaterialNeeded;
 
-            const deductFromThisBatch = Math.min(batch.quantity, remainingToDeduct);
-            const newBatchQuantity = batch.quantity - deductFromThisBatch;
-
-            console.log(`📦 Batch ${batch.batch_number}: Deducting ${deductFromThisBatch}, New qty: ${newBatchQuantity}`);
-
-            // Update batch quantity
-            await client.query(`
-              UPDATE material_stock_items 
-              SET quantity = $1
-              WHERE id = $2
-            `, [newBatchQuantity, batch.id]);
-
-            // If batch is empty, mark as inactive
-            if (newBatchQuantity === 0) {
-              await client.query(`
-                UPDATE material_stock_items 
-                SET batch_status = 'inactive'
-                WHERE id = $1
-              `, [batch.id]);
-              console.log(`🚫 Batch ${batch.batch_number} marked as inactive (empty)`);
-            }
-
-            remainingToDeduct -= deductFromThisBatch;
-          }
-
-          // Update total quantity in materials table
-          const totalQtyResult = await client.query(`
-            SELECT COALESCE(SUM(quantity), 0) as total_quantity
-            FROM material_stock_items
-            WHERE material_id = $1 AND batch_status = 'active'
-          `, [material.material_id]);
-
-          const newTotalQuantity = totalQtyResult.rows[0].total_quantity;
+          // Simple direct update to materials table only
           await client.query(`
             UPDATE materials 
             SET quantity = $1, updated_at = NOW()
             WHERE material_id = $2
-          `, [newTotalQuantity, material.material_id]);
+          `, [newQuantity, material.material_id]);
 
-          // Update material unit_price to match the next active batch (FIFO)
-          const nextBatchResult = await client.query(`
-            SELECT unit_price FROM material_stock_items
-            WHERE material_id = $1 AND batch_status = 'active' AND quantity > 0
-            ORDER BY batch_number ASC LIMIT 1
-          `, [material.material_id]);
-
-          if (nextBatchResult.rows.length > 0) {
-            const nextUnitPrice = nextBatchResult.rows[0].unit_price;
-            await client.query(`
-              UPDATE materials SET unit_price = $1 WHERE material_id = $2
-            `, [nextUnitPrice, material.material_id]);
-            console.log(`💰 Updated unit price to ${nextUnitPrice} for material ${material.material_id}`);
-          } else {
-            // No active batches left, set unit_price to 0
-            await client.query(`
-              UPDATE materials SET unit_price = 0 WHERE material_id = $1
-            `, [material.material_id]);
-            console.log(`⚠️ No active batches left for material ${material.material_id}, set unit_price to 0`);
-          }
-
-          console.log(`✅ Material ${material.material_id} updated: New total quantity = ${newTotalQuantity}`);
+          console.log(`✅ Material ${material.material_id} updated: ${currentQuantity} -> ${newQuantity}`);
         }
       }
 

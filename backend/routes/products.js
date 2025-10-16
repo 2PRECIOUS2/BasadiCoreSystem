@@ -3,6 +3,8 @@ import express from 'express';
 import multer from 'multer';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { v4 as uuidv4 } from 'uuid';
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -169,15 +171,21 @@ const productsRoutes = (pool) => {
   // POST new product
   router.post('/', upload.single('image'), async (req, res) => {
     console.log('🔍 POST new product called:', req.body);
-    let client;
+    const client = await pool.connect();
+    
     try {
-      client = await pool.connect();
+      await client.query('BEGIN');
+      
       // Parse fields from FormData
       const product_name = req.body.product_name;
       const category = req.body.category;
       const cost_of_production = req.body.cost_of_production || 0;
       const selling_price = req.body.selling_price || 0;
       const quantity = req.body.quantity || 0;
+      
+      // Generate product ID
+      const productId = uuidv4();
+      
       // Handle image upload
       let image_path = null;
       if (req.file) {
@@ -186,6 +194,7 @@ const productsRoutes = (pool) => {
 
       // Basic validation
       if (!product_name || !category) {
+        await client.query('ROLLBACK');
         return res.status(400).json({
           success: false,
           message: 'Product name and category are required'
@@ -193,18 +202,21 @@ const productsRoutes = (pool) => {
       }
 
       const result = await client.query(
-        `INSERT INTO products (product_name, category, cost_of_production, selling_price, quantity, image_path, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW()) RETURNING *`,
-        [product_name, category, cost_of_production, selling_price, quantity, image_path]
+        `INSERT INTO products (product_id, product_name, category, cost_of_production, selling_price, quantity, image_path, created_at, updated_at, status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW(), 'active') RETURNING *`,
+        [productId, product_name, category, cost_of_production, selling_price, quantity, image_path]
       );
 
-      console.log('✅ Product created successfully:', result.rows[0].id);
+      await client.query('COMMIT');
+
+      console.log('✅ Product created successfully:', result.rows[0].product_id);
       res.status(201).json({
         success: true,
         message: 'Product created successfully',
         data: result.rows[0]
       });
     } catch (error) {
+      await client.query('ROLLBACK');
       console.error('❌ Error creating product:', error);
       res.status(500).json({
         success: false,
@@ -212,62 +224,127 @@ const productsRoutes = (pool) => {
         error: error.message
       });
     } finally {
-      if (client) {
-        client.release();
-      }
+      client.release();
     }
   });
 
   // POST new product (for /add endpoint to match frontend)
   router.post('/add', upload.single('image'), async (req, res) => {
     console.log('🔍 POST /add new product called:', req.body);
-    let client;
+    const client = await pool.connect();
+    
     try {
-      client = await pool.connect();
-      // Parse fields from FormData
-      const product_name = req.body.product_name;
-      const category = req.body.category;
-      const cost_of_production = req.body.cost_of_production || 0;
-      const selling_price = req.body.selling_price || 0;
-      const quantity = req.body.quantity || 0;
-      // Handle image upload
-      let image_path = null;
-      if (req.file) {
-        image_path = '/images/products/' + req.file.filename;
-      }
+      await client.query('BEGIN');
+      
+      const {
+        product_name,
+        quantity = 0,
+        selling_price,
+        category,
+        cost_of_production = 0,
+        materials // ✅ Extract materials from request
+      } = req.body;
 
-      // Basic validation
-      if (!product_name || !category) {
+      console.log('📦 Creating product with materials:', materials ? JSON.parse(materials) : 'No materials');
+
+      // Validate required fields
+      if (!product_name || !selling_price || !category) {
+        await client.query('ROLLBACK');
         return res.status(400).json({
           success: false,
-          message: 'Product name and category are required'
+          message: 'Product name, selling price, and category are required'
         });
       }
 
-      const result = await client.query(
-        `INSERT INTO products (product_name, category, cost_of_production, selling_price, quantity, image_path, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW()) RETURNING *`,
-        [product_name, category, cost_of_production, selling_price, quantity, image_path]
-      );
+      // Generate product ID
+      const productId = uuidv4();
+      
+      // Handle image path
+      let imagePath = null;
+      if (req.file) {
+        imagePath = `/images/products/${req.file.filename}`;
+      }
 
-      const createdProduct = result.rows[0];
-      console.log(`✅ Product created successfully (add): ${createdProduct.product_id} - ${createdProduct.product_name}`);
+      // Insert product
+      const productQuery = `
+        INSERT INTO products (product_id, product_name, quantity, selling_price, category, cost_of_production, image_path, created_at, updated_at, status)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW(), 'active')
+        RETURNING *;
+      `;
+
+      const productResult = await client.query(productQuery, [
+        productId,
+        product_name,
+        parseInt(quantity),
+        parseFloat(selling_price),
+        category,
+        parseFloat(cost_of_production),
+        imagePath
+      ]);
+
+      console.log('✅ Product created:', productResult.rows[0]);
+
+      // ✅ FIX: Store materials in product_materials table
+      if (materials) {
+        try {
+          const materialsArray = JSON.parse(materials);
+          console.log('📦 Processing materials:', materialsArray);
+
+          if (Array.isArray(materialsArray) && materialsArray.length > 0) {
+            for (const material of materialsArray) {
+              if (material.material_id && material.measurement) {
+                // Generate a unique UUID for each material record
+                const materialRecordId = uuidv4();
+                
+                // Get current unit price from materials table for accuracy
+                const materialQuery = await client.query(
+                  'SELECT unit_price, unit FROM materials WHERE material_id = $1',
+                  [material.material_id]
+                );
+
+                const currentUnitPrice = materialQuery.rows[0]?.unit_price || material.unit_price || 0;
+                const currentUnit = materialQuery.rows[0]?.unit || material.unit;
+
+                const materialInsert = `
+                  INSERT INTO product_materials (production_id, product_id, material_id, measurement, unit)
+                  VALUES ($1, $2, $3, $4, $5)
+                `;
+
+                await client.query(materialInsert, [
+                  materialRecordId, // Use unique UUID for each material record
+                  productId,
+                  material.material_id,
+                  parseFloat(material.measurement),
+                  currentUnit
+                ]);
+
+                console.log(`✅ Material stored: ${material.material_id} - ${material.measurement} ${currentUnit}`);
+              }
+            }
+          }
+        } catch (materialError) {
+          console.error('❌ Error processing materials:', materialError);
+          // Don't rollback the entire transaction for material errors
+        }
+      }
+
+      await client.query('COMMIT');
+
       res.status(201).json({
         success: true,
-        message: `Product created successfully`,
-        data: createdProduct
+        message: 'Product created successfully',
+        data: productResult.rows[0]
       });
+
     } catch (error) {
-      console.error('❌ Error creating product (add):', error);
+      await client.query('ROLLBACK');
+      console.error('❌ Error creating product:', error);
       res.status(500).json({
         success: false,
-        message: 'Failed to create product',
-        error: error.message
+        message: 'Error creating product: ' + error.message
       });
     } finally {
-      if (client) {
-        client.release();
-      }
+      client.release();
     }
   });
 
@@ -374,37 +451,46 @@ const productsRoutes = (pool) => {
 
 // GET product materials with material details
 router.get('/:productId/materials', async (req, res) => {
-  const { productId } = req.params;
   let client;
-  
   try {
+    const { productId } = req.params;
+    
+    console.log('🔍 Fetching materials for product:', productId);
+
     client = await pool.connect();
-    const result = await client.query(`
+
+    // Simple query - get all materials for this product
+    let query = `
       SELECT 
-        pm.production_id as product_material_id,
+        pm.production_id,
+        pm.product_id,
         pm.material_id,
         pm.measurement,
         pm.unit,
         m.material_name,
         m.unit_price,
-        m.status
+        m.category as material_category
       FROM product_materials pm
       JOIN materials m ON pm.material_id = m.material_id
       WHERE pm.product_id = $1 AND m.status = 'active'
       ORDER BY m.material_name
-    `, [productId]);
-    
+    `;
+
+    let result = await client.query(query, [productId]);
+
+    console.log(`✅ Found ${result.rows.length} materials for product ${productId}`);
+
     res.json({
       success: true,
-      data: result.rows,
-      count: result.rows.length
+      data: result.rows
     });
+
   } catch (error) {
-    console.error('Error fetching product materials:', error);
+    console.error('❌ Error fetching product materials:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch product materials',
-      error: error.message
+      message: 'Error fetching product materials: ' + error.message,
+      data: []
     });
   } finally {
     if (client) client.release();

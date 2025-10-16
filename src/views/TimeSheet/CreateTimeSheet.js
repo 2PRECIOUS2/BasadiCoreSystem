@@ -370,187 +370,154 @@ const CreateTimeSheet = ({ open, onClose, onSave }) => {
                 </Grid>
               </Box>
 
-              {/* Date & Time Section */}
-              <Box sx={{ mb: 4 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
-                  <ScheduleIcon sx={{ color: '#667eea', fontSize: 28 }} />
-                  <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#2d3748' }}>
-                    Date & Time
-                  </Typography>
-                </Box>
-                <Divider sx={{ mb: 3, borderColor: '#667eea', borderWidth: 1 }} />
-                
-                <Grid container spacing={3}>
-                  <Grid item xs={12} sm={4}>
-                    <TextField
-                      label="Date"
-                      type="date"
-                      value={formData.date}
-                      onChange={(e) => handleInputChange('date', e.target.value)}
-                      required
-                      fullWidth
-                      InputLabelProps={{ shrink: true }}
-                      error={!!errors.date}
-                      helperText={errors.date}
-                      sx={{
-                        '& .MuiOutlinedInput-root': {
-                          '&:hover fieldset': { borderColor: '#667eea', borderWidth: 2 },
-                          '&.Mui-focused fieldset': { borderColor: '#667eea', borderWidth: 2 }
-                        }
-                      }}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={4}>
-                    <Box sx={{ position: 'relative' }}>
-                      <TextField
-                        label="Time In"
-                        type="time"
-                        value={formData.start_time}
-                        onChange={(e) => handleInputChange('start_time', e.target.value)}
-                        required
-                        fullWidth
-                        error={!!errors.start_time}
-                        helperText={errors.start_time}
-                        sx={{
-                          '& .MuiOutlinedInput-root': {
-                            '&:hover fieldset': { borderColor: '#48bb78', borderWidth: 2 },
-                            '&.Mui-focused fieldset': { borderColor: '#48bb78', borderWidth: 2 }
-                          }
-                        }}
-                      />
-                      <Button
-                        size="small"
-                        onClick={() => setCurrentTime('start_time')}
-                        sx={{ 
-                          position: 'absolute', 
-                          right: 8, 
-                          top: 8,
-                          minWidth: 'auto',
-                          p: 0.5,
-                          color: '#48bb78'
-                        }}
-                      >
-                        <AccessTimeIcon fontSize="small" />
-                      </Button>
-                    </Box>
-                  </Grid>
-                  <Grid item xs={12} sm={4}>
-                    <Box sx={{ position: 'relative' }}>
-                      <TextField
-                        label="Time Out"
-                        type="time"
-                        value={formData.end_time}
-                        onChange={(e) => handleInputChange('end_time', e.target.value)}
-                        required
-                        fullWidth
-                        error={!!errors.end_time}
-                        helperText={errors.end_time}
-                        sx={{
-                          '& .MuiOutlinedInput-root': {
-                            '&:hover fieldset': { borderColor: '#ed8936', borderWidth: 2 },
-                            '&.Mui-focused fieldset': { borderColor: '#ed8936', borderWidth: 2 }
-                          }
-                        }}
-                      />
-                      <Button
-                        size="small"
-                        onClick={() => setCurrentTime('end_time')}
-                        sx={{ 
-                          position: 'absolute', 
-                          right: 8, 
-                          top: 8,
-                          minWidth: 'auto',
-                          p: 0.5,
-                          color: '#ed8936'
-                        }}
-                      >
-                        <AccessTimeIcon fontSize="small" />
-                      </Button>
-                    </Box>
-                  </Grid>
-                </Grid>
-              </Box>
+            <Box sx={{ mb: 4 }}>
+  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+    <ScheduleIcon sx={{ color: '#667eea', fontSize: 28 }} />
+    <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#2d3748' }}>
+      Date & Time
+    </Typography>
+  </Box>
+  <Divider sx={{ mb: 3, borderColor: '#667eea', borderWidth: 1 }} />
+  
+  <Grid container spacing={3}>
+    <Grid item xs={12} sm={4}>
+      <TextField
+        label="Date"
+        type="date"
+        value={formData.date}
+        onChange={(e) => handleInputChange('date', e.target.value)}
+        required
+        fullWidth
+        InputLabelProps={{ shrink: true }}
+        error={!!errors.date}
+        helperText={errors.date}
+        sx={{
+          '& .MuiOutlinedInput-root': {
+            '&:hover fieldset': { borderColor: '#667eea', borderWidth: 2 },
+            '&.Mui-focused fieldset': { borderColor: '#667eea', borderWidth: 2 }
+          }
+        }}
+      />
+    </Grid>
+    <Grid item xs={12} sm={4}>
+      <TextField
+        label="Time In"
+        type="time"
+        value={formData.start_time}
+        onChange={(e) => handleInputChange('start_time', e.target.value)}
+        required
+        fullWidth
+        InputLabelProps={{ shrink: true }}
+        error={!!errors.start_time}
+        helperText={errors.start_time}
+        inputProps={{
+          step: 300, // 5 min intervals
+          placeholder: '--:--'
+        }}
+        sx={{
+          '& .MuiOutlinedInput-root': {
+            '&:hover fieldset': { borderColor: '#48bb78', borderWidth: 2 },
+            '&.Mui-focused fieldset': { borderColor: '#48bb78', borderWidth: 2 }
+          },
+          '& input[type="time"]::-webkit-calendar-picker-indicator': {
+            cursor: 'pointer'
+          }
+        }}
+      />
+    </Grid>
+    <Grid item xs={12} sm={4}>
+      <TextField
+        label="Time Out"
+        type="time"
+        value={formData.end_time}
+        onChange={(e) => handleInputChange('end_time', e.target.value)}
+        required
+        fullWidth
+        InputLabelProps={{ shrink: true }}
+        error={!!errors.end_time}
+        helperText={errors.end_time}
+        inputProps={{
+          step: 300, // 5 min intervals
+          placeholder: '--:--'
+        }}
+        sx={{
+          '& .MuiOutlinedInput-root': {
+            '&:hover fieldset': { borderColor: '#ed8936', borderWidth: 2 },
+            '&.Mui-focused fieldset': { borderColor: '#ed8936', borderWidth: 2 }
+          },
+          '& input[type="time"]::-webkit-calendar-picker-indicator': {
+            cursor: 'pointer'
+          }
+        }}
+      />
+    </Grid>
+  </Grid>
+</Box>
 
-              {/* Break Time Section */}
-              <Box sx={{ mb: 4 }}>
-                <Typography variant="h6" sx={{ 
-                  mb: 2, 
-                  color: '#2d3748',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 1
-                }}>
-                  🍽️ Break Time (Optional)
-                </Typography>
-                <Divider sx={{ mb: 3, borderColor: '#f59e0b', borderWidth: 1 }} />
-                
-                <Grid container spacing={3}>
-                  <Grid item xs={12} sm={6}>
-                    <Box sx={{ position: 'relative' }}>
-                      <TextField
-                        label="Break Start"
-                        type="time"
-                        value={formData.break_start}
-                        onChange={(e) => handleInputChange('break_start', e.target.value)}
-                        fullWidth
-                        sx={{
-                          '& .MuiOutlinedInput-root': {
-                            '&:hover fieldset': { borderColor: '#f59e0b', borderWidth: 2 },
-                            '&.Mui-focused fieldset': { borderColor: '#f59e0b', borderWidth: 2 }
-                          }
-                        }}
-                      />
-                      <Button
-                        size="small"
-                        onClick={() => setCurrentTime('break_start')}
-                        sx={{ 
-                          position: 'absolute', 
-                          right: 8, 
-                          top: 8,
-                          minWidth: 'auto',
-                          p: 0.5,
-                          color: '#f59e0b'
-                        }}
-                      >
-                        <AccessTimeIcon fontSize="small" />
-                      </Button>
-                    </Box>
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <Box sx={{ position: 'relative' }}>
-                      <TextField
-                        label="Break End"
-                        type="time"
-                        value={formData.break_end}
-                        onChange={(e) => handleInputChange('break_end', e.target.value)}
-                        fullWidth
-                        error={!!errors.break_end}
-                        helperText={errors.break_end}
-                        sx={{
-                          '& .MuiOutlinedInput-root': {
-                            '&:hover fieldset': { borderColor: '#f59e0b', borderWidth: 2 },
-                            '&.Mui-focused fieldset': { borderColor: '#f59e0b', borderWidth: 2 }
-                          }
-                        }}
-                      />
-                      <Button
-                        size="small"
-                        onClick={() => setCurrentTime('break_end')}
-                        sx={{ 
-                          position: 'absolute', 
-                          right: 8, 
-                          top: 8,
-                          minWidth: 'auto',
-                          p: 0.5,
-                          color: '#f59e0b'
-                        }}
-                      >
-                        <AccessTimeIcon fontSize="small" />
-                      </Button>
-                    </Box>
-                  </Grid>
-                </Grid>
-              </Box>
+{/* Break Time Section */}
+<Box sx={{ mb: 4 }}>
+  <Typography variant="h6" sx={{ 
+    mb: 2, 
+    color: '#2d3748',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 1
+  }}>
+    🍽️ Break Time (Optional)
+  </Typography>
+  <Divider sx={{ mb: 3, borderColor: '#f59e0b', borderWidth: 1 }} />
+  
+  <Grid container spacing={3}>
+    <Grid item xs={12} sm={6}>
+      <TextField
+        label="Break Start"
+        type="time"
+        value={formData.break_start}
+        onChange={(e) => handleInputChange('break_start', e.target.value)}
+        fullWidth
+        InputLabelProps={{ shrink: true }}
+        inputProps={{
+          step: 300, // 5 min intervals
+          placeholder: '--:--'
+        }}
+        sx={{
+          '& .MuiOutlinedInput-root': {
+            '&:hover fieldset': { borderColor: '#f59e0b', borderWidth: 2 },
+            '&.Mui-focused fieldset': { borderColor: '#f59e0b', borderWidth: 2 }
+          },
+          '& input[type="time"]::-webkit-calendar-picker-indicator': {
+            cursor: 'pointer'
+          }
+        }}
+      />
+    </Grid>
+    <Grid item xs={12} sm={6}>
+      <TextField
+        label="Break End"
+        type="time"
+        value={formData.break_end}
+        onChange={(e) => handleInputChange('break_end', e.target.value)}
+        fullWidth
+        InputLabelProps={{ shrink: true }}
+        error={!!errors.break_end}
+        helperText={errors.break_end}
+        inputProps={{
+          step: 300, // 5 min intervals
+          placeholder: '--:--'
+        }}
+        sx={{
+          '& .MuiOutlinedInput-root': {
+            '&:hover fieldset': { borderColor: '#f59e0b', borderWidth: 2 },
+            '&.Mui-focused fieldset': { borderColor: '#f59e0b', borderWidth: 2 }
+          },
+          '& input[type="time"]::-webkit-calendar-picker-indicator': {
+            cursor: 'pointer'
+          }
+        }}
+      />
+    </Grid>
+  </Grid>
+</Box>
 
               {/* Work Completed Section */}
               <Box sx={{ mb: 4 }}>

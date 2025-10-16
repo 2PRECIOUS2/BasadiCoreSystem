@@ -139,9 +139,10 @@ const prepareMaterialsForSubmission = () => {
     .map(mat => {
       const selectedMaterial = materialsList.find(m => m.material_id === mat.materialId);
       return {
-        materialId: mat.materialId,
+        material_id: mat.materialId, // Use material_id to match backend
         measurement: parseFloat(mat.measurement),
-        unit: selectedMaterial ? selectedMaterial.unit : ''
+        unit: selectedMaterial ? selectedMaterial.unit : '',
+        unit_price: selectedMaterial ? parseFloat(selectedMaterial.unit_price) : 0 // ✅ Include unit price
       };
     });
 };

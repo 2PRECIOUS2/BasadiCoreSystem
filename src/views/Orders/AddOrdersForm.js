@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Paper, Typography, Button, TextField, MenuItem, Box, IconButton, Divider, InputAdornment, Select, FormControl, FormControlLabel, Checkbox, List, ListItem, ListItemText, ListSubheader, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Avatar, Snackbar, Alert, Dialog, DialogTitle, DialogContent, Stack, Slide
+  Paper, Typography, Button, TextField, MenuItem, Box, Autocomplete, IconButton, Divider, InputAdornment, Select, FormControl, FormControlLabel, Checkbox, List, ListItem, ListItemText, ListSubheader, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Avatar, Snackbar, Alert, Dialog, DialogTitle, DialogContent, Stack, Slide
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
@@ -633,28 +633,56 @@ const [projectCustomerLastName, setProjectCustomerLastName] = useState("");
                           {/* Conditional Fields based on Order Type */}
                           {orderType === "standard" ? (
                             <>
-                              <TextField
-                                select
-                                label="Select Customer"
-                                value={selectedCustomer}
-                                onChange={e => setSelectedCustomer(e.target.value)}
-                                fullWidth
-                                required
-                                error={!!errors.selectedCustomer}
-                                helperText={errors.selectedCustomer}
-                              >
-                                {loading ? (
-                                  <MenuItem disabled>Loading...</MenuItem>
-                                ) : customers.length > 0 ? (
-                                  customers.map(cust => (
-                                    <MenuItem key={cust.customerNumber} value={cust.customerNumber.toString()}>
-                                      {`${cust.firstName} ${cust.lastName}, ${cust.email}`}
-                                    </MenuItem>
-                                  ))
-                                ) : (
-                                  <MenuItem disabled>No customers found</MenuItem>
-                                )}
-                              </TextField>
+                              <Autocomplete
+                              value={customers.find(cust => cust.customerNumber.toString() === selectedCustomer) || null}
+                              onChange={(event, newValue) => {
+                                setSelectedCustomer(newValue ? newValue.customerNumber.toString() : '');
+                              }}
+                              options={customers}
+                              getOptionLabel={(option) => `${option.firstName} ${option.lastName}, ${option.email}`}
+                              isOptionEqualToValue={(option, value) => option.customerNumber === value.customerNumber}
+                              loading={loading}
+                              loadingText="Loading customers..."
+                              noOptionsText="No customers found"
+                              renderInput={(params) => (
+                                <TextField
+                                  {...params}
+                                  label="Select Customer"
+                                  placeholder="Search customers by name or email..."
+                                  required
+                                  InputProps={{
+                                    ...params.InputProps,
+                                    endAdornment: (
+                                      <>
+                                        {loading ? <CircularProgress color="inherit" size={20} /> : null}
+                                        {params.InputProps.endAdornment}
+                                      </>
+                                    ),
+                                  }}
+                                />
+                              )}
+                              renderOption={(props, option) => (
+                                <li {...props} key={option.customerNumber}>
+                                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                    <span style={{ fontWeight: 600 }}>
+                                      {option.firstName} {option.lastName}
+                                    </span>
+                                    <span style={{ fontSize: '0.875rem', color: '#666' }}>
+                                      {option.email}
+                                    </span>
+                                  </div>
+                                </li>
+                              )}
+                              filterOptions={(options, { inputValue }) => {
+                                const searchTerm = inputValue.toLowerCase();
+                                return options.filter(option => {
+                                  const fullName = `${option.firstName} ${option.lastName}`.toLowerCase();
+                                  const email = option.email.toLowerCase();
+                                  return fullName.includes(searchTerm) || email.includes(searchTerm);
+                                });
+                              }}
+                            />
+                              
 
                               <TextField
                                 select

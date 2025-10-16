@@ -26,7 +26,8 @@ import {
   Avatar,
   Divider,
   Tooltip,
-  CircularProgress
+  CircularProgress,
+  Autocomplete
 } from "@mui/material";
 import {
   Close as CloseIcon,
@@ -66,7 +67,6 @@ export default function CreateProject({ open, onClose, onSave }) {
   const [location, setLocation] = useState("");
   const [partner, setPartner] = useState("");
   const [description, setDescription] = useState("");
-  const [staffAssignment, setStaffAssignment] = useState([]);
   const [loading, setLoading] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" });
   const [errors, setErrors] = useState({});
@@ -142,7 +142,7 @@ export default function CreateProject({ open, onClose, onSave }) {
     if (!deadline) newErrors.deadline = "Deadline is required";
     if (!location) newErrors.location = "Location is required";
     if (!description) newErrors.description = "Project description is required";
-    if (staffAssignment.length === 0) newErrors.staffAssignment = "At least one staff member must be assigned";
+    // Removed staffAssignment validation since staff assignment section was removed
     if (tasks.length === 0) newErrors.tasks = "At least one project task is required";
     
     if (startDate && deadline && startDate > deadline) {
@@ -181,7 +181,6 @@ export default function CreateProject({ open, onClose, onSave }) {
       location,
       partner,
       description,
-      staff: staffAssignment, // General project staff
       tasks: tasks.map(t => ({
         name: t.name,
         staffId: t.assignedStaff.length > 0 ? t.assignedStaff[0] : null, // Backend currently handles single staff per task
@@ -234,7 +233,6 @@ export default function CreateProject({ open, onClose, onSave }) {
     setLocation("");
     setPartner("");
     setDescription("");
-    setStaffAssignment([]);
     setTasks([]);
     setTaskInput("");
     setTaskStaff([]);
@@ -472,75 +470,6 @@ export default function CreateProject({ open, onClose, onSave }) {
               </Grid>
             </Box>
 
-            {/* Staff Assignment Section */}
-            <Box sx={{ mb: 4 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
-                <Group sx={{ color: '#667eea', fontSize: 28 }} />
-                <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#2d3748' }}>
-                  Staff Assignment
-                </Typography>
-              </Box>
-              <Divider sx={{ mb: 3, borderColor: '#667eea', borderWidth: 1 }} />
-              
-              <FormControl fullWidth error={!!errors.staffAssignment}>
-                <InputLabel>Assign Staff Members</InputLabel>
-                <Select
-                  multiple
-                  value={staffAssignment}
-                  onChange={(e) => setStaffAssignment(e.target.value)}
-                  required
-                  renderValue={(selected) => (
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                      {selected.map((value) => {
-                        const staff = staffList.find(s => s.employee_id === value);
-                        const staffName = staff ? `${staff.first_name} ${staff.last_name}` : value;
-                        return (
-                          <Chip key={value} label={staffName} size="small" 
-                            sx={{ 
-                              bgcolor: '#667eea', 
-                              color: 'white',
-                              '& .MuiChip-deleteIcon': { color: 'white' }
-                            }} 
-                          />
-                        );
-                      })}
-                    </Box>
-                  )}
-                  sx={{
-                    '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#667eea', borderWidth: 2 },
-                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#667eea', borderWidth: 2 }
-                  }}
-                >
-                  {staffList.length === 0 ? (
-                    <MenuItem disabled>
-                      <Typography color="textSecondary">
-                        {open ? 'Loading staff members...' : 'No staff members available'}
-                      </Typography>
-                    </MenuItem>
-                  ) : (
-                    staffList.map((staff) => (
-                      <MenuItem key={staff.employee_id} value={staff.employee_id}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                          <Avatar sx={{ width: 32, height: 32, bgcolor: '#667eea' }}>
-                            {staff.first_name?.charAt(0)}{staff.last_name?.charAt(0)}
-                          </Avatar>
-                          <Box>
-                            <Typography>{staff.first_name} {staff.last_name}</Typography>
-                            <Typography variant="caption" color="textSecondary">
-                              {staff.email}
-                            </Typography>
-                          </Box>
-                        </Box>
-                      </MenuItem>
-                    ))
-                  )}
-                </Select>
-                {errors.staffAssignment && (
-                  <Typography color="error" variant="caption">{errors.staffAssignment}</Typography>
-                )}
-              </FormControl>
-            </Box>
-
             {/* Task Management Section */}
             <Box sx={{ mb: 4 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
@@ -579,43 +508,65 @@ export default function CreateProject({ open, onClose, onSave }) {
                     />
                   </Grid>
                   <Grid item xs={12} sm={3}>
-                    <FormControl fullWidth size="small">
-                      <InputLabel>Assign Staff</InputLabel>
-                      <Select
-                        multiple
-                        value={taskStaff}
-                        onChange={(e) => setTaskStaff(e.target.value)}
-                        input={<OutlinedInput label="Assign Staff" />}
-                        renderValue={(selected) => (
-                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                            {selected.map((id) => {
-                              const staff = staffList.find(s => s.employee_id === id);
-                              const staffName = staff ? `${staff.first_name} ${staff.last_name}` : id;
-                              return <Chip key={id} label={staffName} size="small" />;
-                            })}
+                    <Autocomplete
+                      multiple
+                      size="small"
+                      value={staffList.filter(staff => taskStaff.includes(staff.employee_id))}
+                      onChange={(event, newValue) => {
+                        setTaskStaff(newValue.map(staff => staff.employee_id));
+                      }}
+                      options={staffList}
+                      getOptionLabel={(option) => `${option.first_name} ${option.last_name}`}
+                      isOptionEqualToValue={(option, value) => option.employee_id === value.employee_id}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          label="Search & Assign Staff"
+                          placeholder="Search employees..."
+                          sx={{
+                            '& .MuiOutlinedInput-root': {
+                              '&:hover fieldset': { borderColor: '#667eea' },
+                              '&.Mui-focused fieldset': { borderColor: '#667eea' }
+                            }
+                          }}
+                        />
+                      )}
+                      renderOption={(props, option) => (
+                        <Box component="li" {...props} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Avatar sx={{ width: 24, height: 24, bgcolor: '#667eea', fontSize: '0.75rem' }}>
+                            {option.first_name?.charAt(0)}{option.last_name?.charAt(0)}
+                          </Avatar>
+                          <Box>
+                            <Typography variant="body2">
+                              {option.first_name} {option.last_name}
+                            </Typography>
+                            {option.email && (
+                              <Typography variant="caption" color="textSecondary">
+                                {option.email}
+                              </Typography>
+                            )}
                           </Box>
-                        )}
-                      >
-                        {staffList.length === 0 ? (
-                          <MenuItem disabled>
-                            <Typography color="textSecondary">No staff available</Typography>
-                          </MenuItem>
-                        ) : (
-                          staffList.map((staff) => (
-                            <MenuItem key={staff.employee_id} value={staff.employee_id}>
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <Avatar sx={{ width: 24, height: 24, bgcolor: '#667eea', fontSize: '0.75rem' }}>
-                                  {staff.first_name?.charAt(0)}{staff.last_name?.charAt(0)}
-                                </Avatar>
-                                <Typography variant="body2">
-                                  {staff.first_name} {staff.last_name}
-                                </Typography>
-                              </Box>
-                            </MenuItem>
-                          ))
-                        )}
-                      </Select>
-                    </FormControl>
+                        </Box>
+                      )}
+                      renderTags={(value, getTagProps) =>
+                        value.map((option, index) => (
+                          <Chip
+                            variant="outlined"
+                            label={`${option.first_name} ${option.last_name}`}
+                            size="small"
+                            {...getTagProps({ index })}
+                            sx={{ 
+                              bgcolor: '#f0f4ff', 
+                              borderColor: '#667eea',
+                              color: '#667eea'
+                            }}
+                          />
+                        ))
+                      }
+                      noOptionsText="No employees found"
+                      loading={staffList.length === 0}
+                      loadingText="Loading employees..."
+                    />
                   </Grid>
                   <Grid item xs={12} sm={3}>
                     <TextField
