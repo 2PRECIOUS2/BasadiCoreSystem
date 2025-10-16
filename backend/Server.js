@@ -68,7 +68,7 @@ app.use(cors(corsOptions));
 app.use(express.json());
 
 // ---------------------- SESSION ----------------------
-const PgSession = pgSession(session);
+const PgSession = connectPgSimple(session);
 
 app.use(
   session({
