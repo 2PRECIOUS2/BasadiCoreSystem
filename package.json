@@ -40,6 +40,7 @@
     "nodemailer": "^7.0.4",
     "pdfkit": "^0.17.1",
     "pg": "^8.16.0",
+    "connect-pg-simple": "^9.x.x"
     "powerbi-client": "^2.23.1",
     "powerbi-client-react": "^2.0.0",
     "prop-types": "^15.8.1",
