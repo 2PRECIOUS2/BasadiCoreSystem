@@ -51,7 +51,7 @@ export default defineConfig({
     plugins: [svgr(), react()],
     base: './',
     build: {
-        outDir: 'dist',
+        outDir: 'build',
         sourcemap: false,
         chunkSizeWarningLimit: 2400,
         rollupOptions: {
