@@ -69,6 +69,7 @@ export default function UpdateProject({ open, onClose, project, onSave }) {
     return normalized;
   };
 
+  const [title, setTitle] = useState("");
   const [startDate, setStartDate] = useState("");
   const [deadline, setDeadline] = useState("");
   const [location, setLocation] = useState("");
@@ -121,6 +122,7 @@ export default function UpdateProject({ open, onClose, project, onSave }) {
           console.log('✅ Fetched project data:', data);
           console.log('✅ Tasks from API:', data.tasks);
           
+          setTitle(getField(data, "title", "title"));
           setStartDate(formatDate(getField(data, "startDate", "start_date")));
           setDeadline(formatDate(getField(data, "deadline", "deadline")));
           setLocation(getField(data, "location", "location"));
@@ -136,6 +138,7 @@ export default function UpdateProject({ open, onClose, project, onSave }) {
           // fallback to prop if fetch fails
           console.log('📋 Using fallback project data:', project);
           
+          setTitle(getField(project, "title", "title"));
           setStartDate(formatDate(getField(project, "startDate", "start_date")));
           setDeadline(formatDate(getField(project, "deadline", "deadline")));
           setLocation(getField(project, "location", "location"));
@@ -192,9 +195,10 @@ export default function UpdateProject({ open, onClose, project, onSave }) {
     setTasks(tasks.map((t, i) => i === idx ? { ...t, completed: checked } : t));
   };
 
-  // Validation for all required fields except name and category
+  // Validation for all required fields except category
   const validate = () => {
   const newErrors = {};
+  if (!title) newErrors.title = "Project Name is required";
   if (!startDate) newErrors.startDate = "Start Date is required";
   if (!deadline) newErrors.deadline = "Deadline is required";
   if (startDate && deadline && startDate > deadline) newErrors.startDate = "Start Date cannot be after Deadline";
@@ -248,6 +252,7 @@ else if (percent > 30) percentColor = "#ffa726"; // orange
   return;
 }
     const updatedProject = {
+      title,
       startDate,
       deadline,
       location,
@@ -319,10 +324,13 @@ else if (percent > 30) percentColor = "#ffa726"; // orange
           <Grid item xs={12} sm={6}>
             <TextField
               label="Project Name"
-              value={project?.title || ""}
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
               fullWidth
               margin="normal"
-              InputProps={{ readOnly: true }}
+              required
+              error={!!errors.title}
+              helperText={errors.title}
             />
           </Grid>
           <Grid item xs={12} sm={6}>

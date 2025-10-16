@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
-  TextField, MenuItem, Button, Grid, Typography, Paper, Box, Divider, Alert, Dialog, DialogTitle, DialogContent
+  TextField, MenuItem, Button, Grid, Typography, Autocomplete,Paper, Box, Divider, Alert, Dialog, DialogTitle, DialogContent
 } from '@mui/material';
 import { API_BASE_URL } from 'src/config';
 
@@ -43,12 +43,19 @@ useEffect(() => {
 
 useEffect(() => {
   if (formData.product_id && formData.method === "scratch") {
+    console.log('🔍 Fetching materials for product:', formData.product_id);
     fetch(`${API_BASE_URL}/api/products/${formData.product_id}/materials`, {
       credentials: "include",
     })
       .then(res => res.json())
-      .then(data => setProductMaterials(data.data || []))
-      .catch(() => setProductMaterials([]));
+      .then(data => {
+        console.log('📦 Materials API response:', data);
+        setProductMaterials(data.data || []);
+      })
+      .catch((error) => {
+        console.error('❌ Error fetching materials:', error);
+        setProductMaterials([]);
+      });
   } else {
     setProductMaterials([]);
   }
@@ -177,21 +184,37 @@ useEffect(() => {
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
       <Grid container spacing={3}>
-        <Grid item xs={12}>
+       <Grid item xs={12}>
+      <Autocomplete
+        value={products.find(p => p.product_id === formData.product_id) || null}
+        onChange={(event, newValue) => {
+          handleChange({
+            target: {
+              name: 'product_id',
+              value: newValue ? newValue.product_id : ''
+            }
+          });
+        }}
+        options={products}
+        getOptionLabel={(option) => option.product_name}
+        isOptionEqualToValue={(option, value) => option.product_id === value.product_id}
+        renderInput={(params) => (
           <TextField
-            select fullWidth required label="Product Name"
-            name="product_id" value={formData.product_id}
-            onChange={handleChange}
+            {...params}
+            label="Product Name"
+            placeholder="Search products..."
+            required
             size="large"
             sx={{ fontSize: 20 }}
-          >
-            {products.map(p => (
-              <MenuItem key={p.product_id} value={p.product_id}>
-                {p.product_name}
-              </MenuItem>
-            ))}
-          </TextField>
-        </Grid>
+          />
+        )}
+        renderOption={(props, option) => (
+          <li {...props} key={option.product_id}>
+            {option.product_name}
+          </li>
+        )}
+      />
+    </Grid>
         <Grid item xs={12}>
           <TextField
             select fullWidth required label="Production Method"

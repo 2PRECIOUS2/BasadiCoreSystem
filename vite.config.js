@@ -10,9 +10,9 @@ export default defineConfig({
     resolve: {
         alias: {
             src: resolve(__dirname, 'src'),
-            assetsInclude: ['**/*.PNG'],
         },
     },
+    assetsInclude: ['**/*.PNG'],
     esbuild: {
         loader: 'jsx',
         include: /src\/.*\.jsx?$/,
@@ -48,11 +48,20 @@ export default defineConfig({
     //   exportAsDefault: true
     // })],
 
-    plugins: [svgr(), react()],
+    plugins: [react(), svgr()],
     base: '/',
     build: {
-        outDir: 'build',
+        outDir: 'dist',
         sourcemap: false,
         chunkSizeWarningLimit: 2400,
+        rollupOptions: {
+            output: {
+                manualChunks: {
+                    vendor: ['react', 'react-dom'],
+                    mui: ['@mui/material', '@mui/icons-material'],
+                    utils: ['lodash', 'axios']
+                }
+            }
         }
+    }
 });

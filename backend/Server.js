@@ -36,11 +36,32 @@ app.set('trust proxy', 1);
 
 // CORS configuration - MUST specify exact origin when using credentials
 const corsOptions = {
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    const allowedOrigins = [
+      'http://localhost:5173',
+      'http://localhost:5174', // Add this for your current dev server
+      'http://localhost:3000',
+      'https://basadicoresystem-1.onrender.com',
+      'https://basadicoresystem.onrender.com',
+      process.env.FRONTEND_URL
+    ].filter(Boolean);
+    
+    console.log('🌐 CORS Check - Origin:', origin, 'Allowed:', allowedOrigins.includes(origin));
+    
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.log('❌ CORS blocked origin:', origin);
+      callback(null, true); // Allow for debugging - change back in production
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  optionsSuccessStatus: 200 // For legacy browser support
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
+  optionsSuccessStatus: 200
 };
 app.use(cors(corsOptions));
 
@@ -158,44 +179,6 @@ app.use('/api/projects', projectsRouter(dbModule.pool));
 app.use('/api/timesheets', timesheetRoutes(dbModule.pool));
 app.use('/api/dashboard', dashboardRouter(dbModule.pool));
 
-// ---------------------- Session Management ----------------------
-// Session checker route (frontend uses this to verify session)
-app.get('/api/check-session', (req, res) => {
-    // Check if session exists and has user
-    if (!req.session.user) {
-        return res.status(401).json({ 
-            active: false, 
-            message: 'No active session' 
-        });
-    }
-
-    // Check if session is expired (5 minutes of inactivity)
-    const MAX_INACTIVE_TIME = 5 * 60 * 1000; // 5 minutes
-    const now = Date.now();
-    const lastActivity = req.session.lastActivity || now;
-    const inactiveDuration = now - lastActivity;
-
-    if (inactiveDuration > MAX_INACTIVE_TIME) {
-        // Session expired, destroy it
-        req.session.destroy((err) => {
-            if (err) console.error('Session destroy error:', err);
-        });
-        return res.status(440).json({ 
-            active: false, 
-            message: 'Session expired due to inactivity' 
-        });
-    }
-
-    // Update last activity
-    req.session.lastActivity = now;
-
-    // Session is valid
-    res.json({ 
-        active: true, 
-        user: req.session.user,
-        lastActivity: req.session.lastActivity 
-    });
-});
 
 // Logout route
 app.post('/api/logout', (req, res) => {

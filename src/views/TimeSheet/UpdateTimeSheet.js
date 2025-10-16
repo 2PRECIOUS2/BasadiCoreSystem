@@ -16,49 +16,43 @@ import {
 const UpdateTimeSheet = ({ open, timesheet, onClose, onSuccess }) => {
     const [formData, setFormData] = useState({
         date: '',
-        time_in: '',
-        time_out: '',
-        break_start: '',
-        break_end: '',
-        notes: ''
+        start_time: '',
+        end_time: '',
+        break_duration: 0,
+        work_done: ''
     });
     const [errors, setErrors] = useState({});
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
-    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
     // Populate form when timesheet prop changes
     useEffect(() => {
         if (timesheet) {
             setFormData({
                 date: timesheet.date || '',
-                time_in: timesheet.time_in || '',
-                time_out: timesheet.time_out || '',
-                break_start: timesheet.break_start || '',
-                break_end: timesheet.break_end || '',
-                notes: timesheet.notes || ''
+                start_time: timesheet.start_time || '',
+                end_time: timesheet.end_time || '',
+                break_duration: timesheet.break_duration || 0,
+                work_done: timesheet.work_done || ''
             });
         }
     }, [timesheet]);
 
     // Calculate hours
     const calculateHours = () => {
-        const { time_in, time_out, break_start, break_end } = formData;
+        const { start_time, end_time, break_duration } = formData;
         
-        if (!time_in || !time_out) return { regular: 0, overtime: 0 };
+        if (!start_time || !end_time) return { regular: 0, overtime: 0 };
 
-        const timeIn = new Date(`2000-01-01T${time_in}`);
-        const timeOut = new Date(`2000-01-01T${time_out}`);
-        let breakDuration = 0;
+        const timeIn = new Date(`2000-01-01T${start_time}`);
+        const timeOut = new Date(`2000-01-01T${end_time}`);
+        
+        // break_duration is already in minutes from backend
+        const breakDurationHours = break_duration / 60; // convert minutes to hours
 
-        if (break_start && break_end) {
-            const breakStart = new Date(`2000-01-01T${break_start}`);
-            const breakEnd = new Date(`2000-01-01T${break_end}`);
-            breakDuration = (breakEnd - breakStart) / (1000 * 60 * 60); // hours
-        }
-
-        const totalHours = (timeOut - timeIn) / (1000 * 60 * 60) - breakDuration;
+        const totalHours = (timeOut - timeIn) / (1000 * 60 * 60) - breakDurationHours;
         const regularHours = Math.min(totalHours, 8);
         const overtimeHours = Math.max(totalHours - 8, 0);
 
@@ -78,22 +72,14 @@ const UpdateTimeSheet = ({ open, timesheet, onClose, onSuccess }) => {
         const newErrors = {};
         
         if (!formData.date) newErrors.date = 'Date is required';
-        if (!formData.time_in) newErrors.time_in = 'Time in is required';
-        if (!formData.time_out) newErrors.time_out = 'Time out is required';
+        if (!formData.start_time) newErrors.start_time = 'Start time is required';
+        if (!formData.end_time) newErrors.end_time = 'End time is required';
         
-        if (formData.time_in && formData.time_out) {
-            const timeIn = new Date(`2000-01-01T${formData.time_in}`);
-            const timeOut = new Date(`2000-01-01T${formData.time_out}`);
+        if (formData.start_time && formData.end_time) {
+            const timeIn = new Date(`2000-01-01T${formData.start_time}`);
+            const timeOut = new Date(`2000-01-01T${formData.end_time}`);
             if (timeOut <= timeIn) {
-                newErrors.time_out = 'Time out must be after time in';
-            }
-        }
-
-        if (formData.break_start && formData.break_end) {
-            const breakStart = new Date(`2000-01-01T${formData.break_start}`);
-            const breakEnd = new Date(`2000-01-01T${formData.break_end}`);
-            if (breakEnd <= breakStart) {
-                newErrors.break_end = 'Break end must be after break start';
+                newErrors.end_time = 'End time must be after start time';
             }
         }
 
@@ -168,10 +154,10 @@ const UpdateTimeSheet = ({ open, timesheet, onClose, onSuccess }) => {
                                 fullWidth
                                 label="Time In"
                                 type="time"
-                                value={formData.time_in}
-                                onChange={(e) => handleChange('time_in', e.target.value)}
-                                error={!!errors.time_in}
-                                helperText={errors.time_in}
+                                value={formData.start_time}
+                                onChange={(e) => handleChange('start_time', e.target.value)}
+                                error={!!errors.start_time}
+                                helperText={errors.start_time}
                                 InputLabelProps={{ shrink: true }}
                                 margin="normal"
                             />
@@ -182,10 +168,10 @@ const UpdateTimeSheet = ({ open, timesheet, onClose, onSuccess }) => {
                                 fullWidth
                                 label="Time Out"
                                 type="time"
-                                value={formData.time_out}
-                                onChange={(e) => handleChange('time_out', e.target.value)}
-                                error={!!errors.time_out}
-                                helperText={errors.time_out}
+                                value={formData.end_time}
+                                onChange={(e) => handleChange('end_time', e.target.value)}
+                                error={!!errors.end_time}
+                                helperText={errors.end_time}
                                 InputLabelProps={{ shrink: true }}
                                 margin="normal"
                             />
@@ -194,28 +180,13 @@ const UpdateTimeSheet = ({ open, timesheet, onClose, onSuccess }) => {
                         <Grid item xs={12} sm={6}>
                             <TextField
                                 fullWidth
-                                label="Break Start"
-                                type="time"
-                                value={formData.break_start}
-                                onChange={(e) => handleChange('break_start', e.target.value)}
-                                error={!!errors.break_start}
-                                helperText={errors.break_start}
+                                label="Break Duration (minutes)"
+                                type="number"
+                                value={formData.break_duration}
+                                onChange={(e) => handleChange('break_duration', parseInt(e.target.value) || 0)}
                                 InputLabelProps={{ shrink: true }}
                                 margin="normal"
-                            />
-                        </Grid>
-                        
-                        <Grid item xs={12} sm={6}>
-                            <TextField
-                                fullWidth
-                                label="Break End"
-                                type="time"
-                                value={formData.break_end}
-                                onChange={(e) => handleChange('break_end', e.target.value)}
-                                error={!!errors.break_end}
-                                helperText={errors.break_end}
-                                InputLabelProps={{ shrink: true }}
-                                margin="normal"
+                                inputProps={{ min: 0, max: 480 }} // Max 8 hours break
                             />
                         </Grid>
                         
@@ -225,8 +196,8 @@ const UpdateTimeSheet = ({ open, timesheet, onClose, onSuccess }) => {
                                 label="Notes"
                                 multiline
                                 rows={3}
-                                value={formData.notes}
-                                onChange={(e) => handleChange('notes', e.target.value)}
+                                value={formData.work_done}
+                                onChange={(e) => handleChange('work_done', e.target.value)}
                                 margin="normal"
                             />
                         </Grid>

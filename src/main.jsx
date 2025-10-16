@@ -9,8 +9,8 @@ import App from './App';
 import { BrowserRouter } from 'react-router-dom';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
-  <Suspense>
-    <BrowserRouter basename='/Basadi-Core'>
+  <Suspense fallback={<div>Loading...</div>}> 
+    <BrowserRouter>
       <App />
     </BrowserRouter>
   </Suspense>,

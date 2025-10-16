@@ -11,7 +11,7 @@ function App() {
   const [mode, setMode] = useState('light');
   const [showSplash, setShowSplash] = useState(true);
   const [isSidebarOpen, setSidebarOpen] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(true); // for testing, set true initially
+  const [isAuthenticated, setIsAuthenticated] = useState(false); // for testing, set true initially
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -31,6 +31,29 @@ function App() {
     [mode]
   );
 
+    useEffect(() => {
+    const checkAuthStatus = async () => {
+      try {
+        const response = await fetch('/api/check-session', {
+          credentials: 'include'
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setIsAuthenticated(data.active);
+        } else {
+          setIsAuthenticated(false);
+        }
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        setIsAuthenticated(false);
+      } finally {
+        setAuthChecked(true);
+      }
+    };
+
+    checkAuthStatus();
+  }, []);
   // splash screen timer
   useEffect(() => {
     const timer = setTimeout(() => setShowSplash(false), 1200);
