@@ -1,0 +1,1 @@
+import{j as t}from"./mui-051d3b2b.js";import{O as o}from"./index-755be80d.js";import"./vendor-0625b040.js";import"./utils-f1b31201.js";const e=()=>t.jsx(t.Fragment,{children:t.jsx(o,{})});export{e as default};
