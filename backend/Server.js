@@ -6,7 +6,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import dbModule from './db/index.js';
 import pkg from 'connect-pg-simple';
-import session from 'express-session';
+
 
 
 
