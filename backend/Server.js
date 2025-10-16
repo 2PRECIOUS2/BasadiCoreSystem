@@ -5,7 +5,10 @@ import session from 'express-session';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dbModule from './db/index.js';
-import pgSession from 'connect-pg-simple';
+import pkg from 'connect-pg-simple';
+import session from 'express-session';
+
+
 
 // Routes imports
 import loginRoutes from './routes/Login.js';
