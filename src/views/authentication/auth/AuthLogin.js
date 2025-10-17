@@ -17,7 +17,6 @@ import {
 } from '@mui/material';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import { getDefaultRoute } from '../../utils/rbac';
 import { API_BASE_URL } from 'src/config';
 
 const AuthLogin = ({ title, subtitle, subtext, setIsAuthenticated, setUser }) => {
@@ -117,8 +116,7 @@ const AuthLogin = ({ title, subtitle, subtext, setIsAuthenticated, setUser }) =>
         if (setIsAuthenticated) setIsAuthenticated(true);
         if (setUser) setUser(data.user);
         
-        const target = getDefaultRoute();
-        setTimeout(() => navigate(target), 1200);
+        setTimeout(() => navigate('/dashboard'), 1200);
       } else {
         setError(data.message || `Login failed (Status: ${response.status})`);
       }
