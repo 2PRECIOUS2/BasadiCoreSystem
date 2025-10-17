@@ -1,0 +1,1 @@
+import"./vendor-0625b040.js";import{h as n}from"./index-06d060e6.js";const P=({permission:r,children:s,fallback:t=null,requireAll:f=!1,requireAny:i=!1})=>{if(r&&typeof r=="string")return n(r)?s:t;if(r&&Array.isArray(r)){if(f){if(r.every(e=>n(e)))return s}else if(i&&r.some(e=>n(e)))return s;return t}return t};export{P};
