@@ -87,13 +87,18 @@ app.use(session({
 
 // Update the requireLogin middleware to use 20-minute timeout
 function requireLogin(req, res, next) {
-  // Allow login and register routes without session
+  // When mounted at '/api', req.path excludes '/api'
+  const pathOnly = req.path || '';
+  // Allow unauthenticated API endpoints and static files
   if (
-    req.path.startsWith('/api/login') ||
-    req.path.startsWith('/api/register') ||
-    req.path === '/' ||
-    req.path.startsWith('/images') ||
-    req.path === '/api/check-session'
+    req.method === 'OPTIONS' ||
+    pathOnly === '/' ||
+    pathOnly.startsWith('/images') ||
+    pathOnly === '/login' ||
+    pathOnly === '/register' ||
+    pathOnly === '/check-session' ||
+    pathOnly === '/session-check' ||
+    pathOnly === '/health'
   ) {
     return next();
   }
@@ -158,7 +163,7 @@ app.get('/api/check-session', (req, res) => {
     });
 });
 
-app.use(requireLogin);
+app.use('/api', requireLogin);
 
 // ---------------------- Routes ----------------------
 app.use('/api/login', loginRoutes(dbModule.pool));
@@ -196,11 +201,20 @@ app.post('/api/logout', (req, res) => {
 // Serve images from the public directory
 app.use('/images', express.static(path.join(__dirname, 'public/images')));
 
+// Serve static frontend build (Vite output)
+app.use(express.static(path.resolve(__dirname, '../build')));
+
+// SPA fallback for client-side routing (non-API routes)
+app.get('*', (req, res, next) => {
+  if (req.path.startsWith('/api')) return next();
+  res.sendFile(path.resolve(__dirname, '../build', 'index.html'));
+});
+
 // ---------------------- Cron jobs ----------------------
 orderStatusUpdate(dbModule.pool);
 
-// Basic test route
-app.get('/', (req, res) => {
+// Basic health endpoint
+app.get('/api/health', (req, res) => {
   res.json({ 
     message: 'BasadiCore Backend API is running!', 
     timestamp: new Date().toISOString(),
