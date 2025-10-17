@@ -53,22 +53,23 @@ function EmployeesPage() {
 
 
   useEffect(() => {
-  // Fetch employees from backend
-  axios.get("/api/employees", { withCredentials: true })
-    .then(res => {
-      setEmployees(res.data);
-    })
-    .catch(err => {
-      console.error("Failed to fetch employees:", err);
-    });
-}, []);
+    // Fetch employees from backend
+    axios
+      .get(`${API_BASE_URL}/api/employees`, { withCredentials: true })
+      .then((res) => {
+        setEmployees(res.data);
+      })
+      .catch((err) => {
+        console.error("Failed to fetch employees:", err);
+      });
+  }, []);
 
 const handleEdit = (employee) => {
   setEditingEmployee(employee);
 };
 
 const handleUpdate = async (form) => {
-  await axios.put(`/api/employees/${editingEmployee.employee_id}`, form, {
+  await axios.put(`${API_BASE_URL}/api/employees/${editingEmployee.employee_id}`, form, {
     withCredentials: true
   });
   

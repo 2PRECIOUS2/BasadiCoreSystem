@@ -53,13 +53,13 @@ const EmployeesList = ({ onView, onEdit, refreshTrigger }) => {
 
   // Fetch employees from backend
   const fetchEmployees = async () => {
-  try {
-    const res = await axios.get("/api/employees", { withCredentials: true });
-    setEmployees(res.data);
-  } catch (err) {
-    setEmployees([]);
-  }
-};
+    try {
+      const res = await axios.get(`${API_BASE_URL}/api/employees`, { withCredentials: true });
+      setEmployees(res.data);
+    } catch (err) {
+      setEmployees([]);
+    }
+  };
 
 useEffect(() => {
   fetchEmployees();
@@ -105,14 +105,14 @@ const handleConfirm = async () => {
   try {
     if (actionType === "archive") {
       await axios.put(
-        `/api/employees/${selectedEmp.employee_id}/archive`,
+        `${API_BASE_URL}/api/employees/${selectedEmp.employee_id}/archive`,
         {}, // body is empty
         { withCredentials: true }
       );
       setSnackbarMsg("Employee archived successfully");
     } else if (actionType === "restore") {
       await axios.put(
-        `/api/employees/${selectedEmp.employee_id}/restore`,
+        `${API_BASE_URL}/api/employees/${selectedEmp.employee_id}/restore`,
         {},
         { withCredentials: true }
       );

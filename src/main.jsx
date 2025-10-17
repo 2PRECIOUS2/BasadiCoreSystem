@@ -10,7 +10,7 @@ import { BrowserRouter } from 'react-router-dom';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <Suspense>
-    <BrowserRouter basename='/Basadi-Core'>
+    <BrowserRouter basename='/'>
       <App />
     </BrowserRouter>
   </Suspense>,

@@ -47,7 +47,7 @@ const [passwordError, setPasswordError] = useState('');
 
     try {
       // --- Send data to your backend API ---
-      const response = await fetch('http://localhost:5000/api/register', { // Adjust port if different
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/register`, { // Adjust port if different
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

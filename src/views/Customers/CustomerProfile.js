@@ -24,6 +24,7 @@ import BadgeIcon from '@mui/icons-material/Badge';
 import PublicIcon from '@mui/icons-material/Public';
 import { useEffect, useState } from 'react';
 import axios from 'axios';
+import { API_BASE_URL } from 'src/config';
 
 
 const CustomerProfile = ({ open, onClose, customer }) => {
@@ -38,11 +39,11 @@ const [amountSpent, setAmountSpent] = useState(0);
     console.log('Fetching stats for customerId:', customerId);
 
     if (customerId) {
-      axios.get(`/api/customers/${customerId}/amount-spent`)
+      axios.get(`${API_BASE_URL}/api/customers/${customerId}/amount-spent`)
         .then(res => {
           if (res.data.success) setAmountSpent(res.data.amountSpent);
         });
-      axios.get(`/api/customers/${customerId}/order-count`)
+      axios.get(`${API_BASE_URL}/api/customers/${customerId}/order-count`)
         .then(res => {
           if (res.data.success) setOrderCount(res.data.orderCount);
         });
