@@ -31,6 +31,8 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const port = process.env.PORT || 5000;
 
+const isProduction = (process.env.NODE_ENV || 'development') === 'production';
+
 // Trust proxy for production deployment
 app.set('trust proxy', 1);
 
@@ -72,19 +74,18 @@ app.use(express.json());
 
 // Session configuration - 20 minute timeout
 app.use(session({
-    secret: process.env.SESSION_SECRET || 'your-super-secret-key-here-basadi-2024',
-    resave: false,
-    saveUninitialized: false,
-    name: 'basadi.session',
-    cookie: {
-        secure: false, // Set to true in production with HTTPS
-        httpOnly: true,
-        maxAge: 20 * 60 * 1000, // 20 minutes in milliseconds
-        sameSite: 'lax'
-    },
-    rolling: true // Reset expiration on each request
+  secret: process.env.SESSION_SECRET || 'your-super-secret-key-here-basadi-2024',
+  resave: false,
+  saveUninitialized: false,
+  name: 'basadi.session',
+  cookie: {
+    secure: isProduction, // cookies sent only over HTTPS in production
+    httpOnly: true,
+    maxAge: 20 * 60 * 1000, // 20 minutes in milliseconds
+    sameSite: isProduction ? 'none' : 'lax' // allow cross-site cookies in production
+  },
+  rolling: true // Reset expiration on each request
 }));
-
 // Update the requireLogin middleware to use 20-minute timeout
 function requireLogin(req, res, next) {
   // Allow login and register routes without session
