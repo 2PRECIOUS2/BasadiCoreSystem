@@ -311,7 +311,7 @@ export const getDefaultRoute = () => {
     case 'admin':
     case 'trainer':
     case 'support':
-      return '/Timesheet';
+      return '/timesheet';
     default:
       return '/timesheet';
   }
